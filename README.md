@@ -1,3 +1,10 @@
+Fork of Bitcoin Core with the addition of Drivechain functionality to
+implement and demonstrate Bitcoin sidechains.
+=====================================
+See:
+[Drivechains blog post](http://www.truthcoin.info/blog/drivechain/) 
+[Drivechains OP code](http://www.truthcoin.info/blog/drivechain-op-code/)
+
 Bitcoin Core integration/staging tree
 =====================================
 
