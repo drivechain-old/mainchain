@@ -27,7 +27,7 @@ static const char DB_REINDEX_FLAG = 'R';
 static const char DB_LAST_BLOCK = 'l';
 
 
-CCoinsViewDB::CCoinsViewDB(size_t nCacheSize, bool fMemory, bool fWipe) : db(GetDataDir() / "chainstate", nCacheSize, fMemory, fWipe, true) 
+CCoinsViewDB::CCoinsViewDB(size_t nCacheSize, bool fMemory, bool fWipe) : db(GetDataDir() / "chainstate", nCacheSize, fMemory, fWipe, true)
 {
 }
 
@@ -212,4 +212,82 @@ bool CBlockTreeDB::LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256
     }
 
     return true;
+}
+
+CSidechainTreeDB::CSidechainTreeDB(size_t nCacheSize, bool fMemory, bool fWipe)
+    : CDBWrapper(GetDataDir() / "blocks" / "sidechain", nCacheSize, fMemory, fWipe) {
+}
+
+bool CSidechainTreeDB::ReadBlockFileInfo(int nFile, CBlockFileInfo &fileinfo) {
+    return Read(make_pair(DB_BLOCK_FILES, nFile), fileinfo);
+}
+
+bool CSidechainTreeDB::WriteReindexing(bool fReindex) {
+    if (fReindex)
+        return Write(DB_REINDEX_FLAG, '1');
+    else
+        return Erase(DB_REINDEX_FLAG);
+}
+
+bool CSidechainTreeDB::ReadReindexing(bool &fReindex) {
+    fReindex = Exists(DB_REINDEX_FLAG);
+    return true;
+}
+
+bool CSidechainTreeDB::ReadLastBlockFile(int &nFile) {
+    return Read(DB_LAST_BLOCK, nFile);
+}
+
+bool CSidechainTreeDB::WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo *> > &fileInfo, int nLastFile, const std::vector<const CBlockIndex *> &blockinfo) {
+    CDBBatch batch(*this);
+    for (std::vector<std::pair<int, const CBlockFileInfo*> >::const_iterator it=fileInfo.begin(); it != fileInfo.end(); it++) {
+        batch.Write(make_pair(DB_BLOCK_FILES, it->first), *it->second);
+    }
+    batch.Write(DB_LAST_BLOCK, nLastFile);
+    for (std::vector<const CBlockIndex*>::const_iterator it=blockinfo.begin(); it != blockinfo.end(); it++) {
+        batch.Write(make_pair(DB_BLOCK_INDEX, (*it)->GetBlockHash()), CDiskBlockIndex(*it));
+    }
+    return WriteBatch(batch, true);
+}
+
+bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, const sidechainObj *> > &list)
+{
+    CDBBatch batch(*this);
+    for (std::vector<std::pair<uint256, const sidechainObj *> >::const_iterator it=list.begin(); it!=list.end(); it++) {
+        const uint256 &objid = it->first;
+        const sidechainObj *obj = it->second;
+        pair<char, uint256> key = make_pair(obj->sidechainop, objid);
+
+        if (obj->sidechainop == 'A') {
+            const sidechainAdd *ptr = (const sidechainAdd *) obj;
+            pair<sidechainAdd, uint256> value = make_pair(*ptr, obj->txid);
+            batch.Write(key, value);
+        }
+        else
+        if (obj->sidechainop == 'W') {
+            const sidechainWithdraw *ptr = (const sidechainWithdraw *) obj;
+            pair<sidechainWithdraw, uint256> value = make_pair(*ptr, obj->txid);
+            batch.Write(key, value);
+        }
+        else
+        if (obj->sidechainop == 'V') {
+            const sidechainVerify *ptr = (const sidechainVerify *) obj;
+            pair<sidechainVerify, uint256> value = make_pair(*ptr, obj->txid);
+            batch.Write(key, value);
+        }
+    }
+
+    return WriteBatch(batch);
+}
+
+bool CSidechainTreeDB::ReadFlag(const string &name, bool fValue) {
+    char ch;
+    if (!Read(make_pair(DB_FLAG, name), ch))
+        return false;
+    fValue = ch == '1';
+    return true;
+}
+
+bool CSidechainTreeDB::WriteFlag(const std::string &name, bool fValue) {
+    return write(std::make_pair('F', name), fValue ? '1' : 0);
 }
