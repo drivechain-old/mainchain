@@ -229,9 +229,13 @@ bool CBitcoinAddress::Set(const CKeyID& id)
     return true;
 }
 
-bool CBitcoinAddress::Set(const CScriptID& id)
+bool CBitcoinAddress::Set(const CScriptID& id, bool drivechain)
 {
-    SetData(Params().Base58Prefix(CChainParams::SCRIPT_ADDRESS), &id, 20);
+    if (drivechain)
+        SetData(Params().Base58Prefix(CChainParams::DRIVECHAIN_ADDRESS), &id, 20);
+    else
+        SetData(Params().Base58Prefix(CChainParams::SCRIPT_ADDRESS), &id, 20);
+
     return true;
 }
 
@@ -249,7 +253,8 @@ bool CBitcoinAddress::IsValid(const CChainParams& params) const
 {
     bool fCorrectSize = vchData.size() == 20;
     bool fKnownVersion = vchVersion == params.Base58Prefix(CChainParams::PUBKEY_ADDRESS) ||
-                         vchVersion == params.Base58Prefix(CChainParams::SCRIPT_ADDRESS);
+                         vchVersion == params.Base58Prefix(CChainParams::SCRIPT_ADDRESS) ||
+                         vchVersion == params.Base58Prefix(CChainParams::DRIVECHAIN_ADDRESS);
     return fCorrectSize && fKnownVersion;
 }
 

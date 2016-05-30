@@ -331,6 +331,14 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                 case OP_NOP:
                     break;
 
+                case OP_CHECKWORKSCOREVERIFY:
+                {
+//                ...which freezes coins, such that they can only be moved if...
+//                ...they are spent by a transaction where...
+//                ...the tx-ID matches a Withdrawal Entry in the MinerDB...
+//                ...and the Withdrawal Entry has achieved the appropriate 'miner score' (see below).
+                }
+
                 case OP_CHECKLOCKTIMEVERIFY:
                 {
                     if (!(flags & SCRIPT_VERIFY_CHECKLOCKTIMEVERIFY)) {
@@ -410,7 +418,7 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
                     break;
                 }
 
-                case OP_NOP1: case OP_NOP4: case OP_NOP5:
+                case OP_NOP1: case OP_NOP5:
                 case OP_NOP6: case OP_NOP7: case OP_NOP8: case OP_NOP9: case OP_NOP10:
                 {
                     if (flags & SCRIPT_VERIFY_DISCOURAGE_UPGRADABLE_NOPS)

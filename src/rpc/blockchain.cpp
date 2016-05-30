@@ -685,6 +685,33 @@ static UniValue BIP9SoftForkDesc(const Consensus::Params& consensusParams, Conse
     return rv;
 }
 
+/**
+ * Used by createsidechain
+ */
+CScript _createsidechain_script(const UniValue& params)
+{
+    CScript sidechainScript;
+    return sidechainScript;
+}
+
+UniValue createsidechain(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "createsidechain\n "
+            "Returns an object containing the txid of the new sidechain.\n"
+            "\nResult:\n"
+            "{\n"
+            "}\n"
+            "\nExamples:\n"
+            + HelpExampleCli("createsidechain", "")
+            + HelpExampleRpc("createsidechain", "")
+        );
+
+    UniValue ret(UniValue::VOBJ);
+    return ret;
+}
+
 UniValue getblockchaininfo(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -996,6 +1023,7 @@ UniValue reconsiderblock(const UniValue& params, bool fHelp)
 static const CRPCCommand commands[] =
 { //  category              name                      actor (function)         okSafeMode
   //  --------------------- ------------------------  -----------------------  ----------
+    { "blockchain",         "createsidechain",        &createsidechain,        true  },
     { "blockchain",         "getblockchaininfo",      &getblockchaininfo,      true  },
     { "blockchain",         "getbestblockhash",       &getbestblockhash,       true  },
     { "blockchain",         "getblockcount",          &getblockcount,          true  },
