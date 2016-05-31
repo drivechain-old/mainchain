@@ -55,6 +55,7 @@ struct sidechainAdd : public sidechainObj {
  * Sidechain withdraw proposal added to database
  */
 struct sidechainWithdraw : public sidechainObj {
+    uint256 sidechainid;
     uint256 proposaltxid;
 
     sidechainWithdraw(void) : sidechainObj() { sidechainop = 'W'; }
@@ -76,6 +77,7 @@ struct sidechainWithdraw : public sidechainObj {
  */
 struct sidechainVerify : public sidechainObj {
     bool verify;
+    uint256 withdrawid;
 
     sidechainVerify(void) : sidechainObj() { sidechainop = 'V'; }
     virtual ~sidechainVerify(void) { }
@@ -86,6 +88,7 @@ struct sidechainVerify : public sidechainObj {
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(sidechainop);
         READWRITE(verify);
+        READWRITE(withdrawid);
     }
 
     string ToString(void) const;

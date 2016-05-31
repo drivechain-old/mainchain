@@ -268,19 +268,27 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
             const sidechainWithdraw *ptr = (const sidechainWithdraw *) obj;
             pair<sidechainWithdraw, uint256> value = make_pair(*ptr, obj->txid);
             batch.Write(key, value);
+            batch.Write(make_pair(make_pair(make_pair('w', ptr->sidechainid), ptr->nHeight), objid), value);
         }
         else
         if (obj->sidechainop == 'V') {
             const sidechainVerify *ptr = (const sidechainVerify *) obj;
             pair<sidechainVerify, uint256> value = make_pair(*ptr, obj->txid);
             batch.Write(key, value);
+            batch.Write(make_pair(make_pair('v', ptr->withdrawid), objid), value);
         }
     }
 
     return WriteBatch(batch);
 }
 
-bool CSidechainTreeDB::ReadFlag(const string &name, bool fValue) {
+bool CSidechainTreeDB::WriteFlag(const std::string &name, bool fValue) {
+    return Write(make_pair(DB_FLAG, name), fValue ? '1' : '0');
+}
+
+
+bool CSidechainTreeDB::ReadFlag(const string &name, bool &fValue)
+{
     char ch;
     if (!Read(make_pair(DB_FLAG, name), ch))
         return false;
@@ -288,6 +296,26 @@ bool CSidechainTreeDB::ReadFlag(const string &name, bool fValue) {
     return true;
 }
 
-bool CSidechainTreeDB::WriteFlag(const std::string &name, bool fValue) {
-    return write(std::make_pair('F', name), fValue ? '1' : 0);
+sidechainAdd *GetSidechain(const uint256 &) {
+
+}
+
+sidechainWithdraw *GetWithdrawProposal(const uint256 & /* Withdraw Proposal ID */) {
+
+}
+
+sidechainVerify *GetVerification(const uint256 & /* Verification ID */) {
+
+}
+
+vector<sidechainAdd *> GetSidechains(void) {
+
+}
+
+vector<sidechainWithdraw *> GetWithdrawProposals(const uint256 & /* Sidechain ID */) {
+
+}
+
+vector<sidechainVerify *> GetVerifications(const uint256 & /* Withdraw Proposal ID */) {
+
 }

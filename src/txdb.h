@@ -131,6 +131,14 @@ public:
     bool WriteFlag(const std::string &name, bool fValue);
     bool ReadFlag(const std::string &name, bool &fValue);
     bool LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256&)> insertBlockIndex);
+
+    sidechainAdd *GetSidechain(const uint256 &);
+    sidechainWithdraw *GetWithdrawProposal(const uint256 & /* Withdraw Proposal ID */);
+    sidechainVerify *GetVerification(const uint256 & /* Verification ID */);
+
+    vector<sidechainAdd *> GetSidechains(void);
+    vector<sidechainWithdraw *> GetWithdrawProposals(const uint256 & /* Sidechain ID */);
+    vector<sidechainVerify *> GetVerifications(const uint256 & /* Withdraw Proposal ID */);
 };
 
 #endif // BITCOIN_TXDB_H
