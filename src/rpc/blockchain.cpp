@@ -699,7 +699,7 @@ UniValue createsidechain(const UniValue& params, bool fHelp)
     if (fHelp || params.size() != 0)
         throw runtime_error(
             "createsidechain\n "
-            "Returns an object containing the txid of the new sidechain.\n"
+            "Returns an object containing the txid and hash of the new sidechain.\n"
             "\nResult:\n"
             "{\n"
             "}\n"

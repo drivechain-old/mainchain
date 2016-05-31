@@ -9,6 +9,8 @@
 #include "coins.h"
 #include "dbwrapper.h"
 #include "chain.h"
+#include "main.h"
+#include "primitives/sidechain.h"
 
 #include <map>
 #include <string>
@@ -109,6 +111,34 @@ public:
     bool WriteFlag(const std::string &name, bool fValue);
     bool ReadFlag(const std::string &name, bool &fValue);
     bool LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256&)> insertBlockIndex);
+};
+
+/** Access to the sidechain database (blocks/sidechain/) */
+class CSidechainTreeDB : public CDBWrapper
+{
+public:
+    CSidechainTreeDB(size_t nCacheSize, bool fMemory = false, bool fWipe = false);
+private:
+    CSidechainTreeDB(const CBlockTreeDB&);
+    void operator=(const CBlockTreeDB&);
+public:
+    bool WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo*> >& fileInfo, int nLastFile, const std::vector<const CBlockIndex*>& blockinfo);
+    bool ReadBlockFileInfo(int nFile, CBlockFileInfo &fileinfo);
+    bool ReadLastBlockFile(int &nFile);
+    bool WriteReindexing(bool fReindex);
+    bool ReadReindexing(bool &fReindex);
+    bool WriteSidechainIndex(const std::vector<std::pair<uint256, const sidechainObj *> > &list);
+    bool WriteFlag(const std::string &name, bool fValue);
+    bool ReadFlag(const std::string &name, bool &fValue);
+    bool LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256&)> insertBlockIndex);
+
+    sidechainAdd *GetSidechain(const uint256 &);
+    sidechainWithdraw *GetWithdrawProposal(const uint256 & /* Withdraw Proposal ID */);
+    sidechainVerify *GetVerification(const uint256 & /* Verification ID */);
+
+    vector<sidechainAdd *> GetSidechains(void);
+    vector<sidechainWithdraw *> GetWithdrawProposals(const uint256 & /* Sidechain ID */);
+    vector<sidechainVerify *> GetVerifications(const uint256 & /* Withdraw Proposal ID */);
 };
 
 #endif // BITCOIN_TXDB_H
