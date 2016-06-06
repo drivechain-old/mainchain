@@ -14,6 +14,8 @@
 
 #include <boost/thread.hpp>
 
+#include <leveldb/db.h>
+
 using namespace std;
 
 static const char DB_COINS = 'c';
@@ -296,26 +298,48 @@ bool CSidechainTreeDB::ReadFlag(const string &name, bool &fValue)
     return true;
 }
 
-sidechainAdd *GetSidechain(const uint256 &) {
+sidechainAdd CSidechainTreeDB::GetSidechain(const uint256 &objid) {
+    pair<char, uint256> idx = make_pair('A', objid);
+    ostringstream ss;
+    ::Serialize(ss, idx, SER_DISK, CLIENT_VERSION);
+    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
+    pcursor->Seek(ss.str());
+
+    if (pcursor->Valid()) {
+        try {
+            std::pair<char, uint256> key;
+            pcursor->GetKey(key);
+
+            if (key == idx) {
+                sidechainAdd add;
+                pcursor->GetValue(add);
+
+                return add;
+            }
+
+        } catch (const std::exception& e) {
+            error("%s: %s", __func__, e.what());
+        }
+    }
+    return sidechainAdd();
+}
+
+sidechainWithdraw* GetWithdrawProposal(const uint256 &objid /* Withdraw Proposal ID */) {
 
 }
 
-sidechainWithdraw *GetWithdrawProposal(const uint256 & /* Withdraw Proposal ID */) {
+sidechainVerify* CSidechainTreeDB::GetVerification(const uint256 &objid /* Verification ID */) {
 
 }
 
-sidechainVerify *GetVerification(const uint256 & /* Verification ID */) {
+vector<sidechainAdd *> CSidechainTreeDB::GetSidechains(void) {
 
 }
 
-vector<sidechainAdd *> GetSidechains(void) {
+vector<sidechainWithdraw *> GetWithdrawProposals(const uint256 &objid /* Sidechain ID */) {
 
 }
 
-vector<sidechainWithdraw *> GetWithdrawProposals(const uint256 & /* Sidechain ID */) {
-
-}
-
-vector<sidechainVerify *> GetVerifications(const uint256 & /* Withdraw Proposal ID */) {
+vector<sidechainVerify *> GetVerifications(const uint256 &objid /* Withdraw Proposal ID */) {
 
 }

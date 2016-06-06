@@ -118,10 +118,6 @@ class CSidechainTreeDB : public CDBWrapper
 {
 public:
     CSidechainTreeDB(size_t nCacheSize, bool fMemory = false, bool fWipe = false);
-private:
-    CSidechainTreeDB(const CBlockTreeDB&);
-    void operator=(const CBlockTreeDB&);
-public:
     bool WriteBatchSync(const std::vector<std::pair<int, const CBlockFileInfo*> >& fileInfo, int nLastFile, const std::vector<const CBlockIndex*>& blockinfo);
     bool ReadBlockFileInfo(int nFile, CBlockFileInfo &fileinfo);
     bool ReadLastBlockFile(int &nFile);
@@ -130,9 +126,9 @@ public:
     bool WriteSidechainIndex(const std::vector<std::pair<uint256, const sidechainObj *> > &list);
     bool WriteFlag(const std::string &name, bool fValue);
     bool ReadFlag(const std::string &name, bool &fValue);
-    bool LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256&)> insertBlockIndex);
+//    bool LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256&)> insertBlockIndex);
 
-    sidechainAdd *GetSidechain(const uint256 &);
+    sidechainAdd GetSidechain(const uint256 & /* Sidechain ID */);
     sidechainWithdraw *GetWithdrawProposal(const uint256 & /* Withdraw Proposal ID */);
     sidechainVerify *GetVerification(const uint256 & /* Verification ID */);
 
