@@ -7,6 +7,7 @@
 
 #include "tinyformat.h"
 #include "utilstrencodings.h"
+#include "primitives/sidechain.h"
 
 using namespace std;
 
@@ -231,4 +232,48 @@ bool CScript::IsPushOnly(const_iterator pc) const
 bool CScript::IsPushOnly() const
 {
     return this->IsPushOnly(begin());
+}
+
+bool CScript::IsSidechainScript(vector<unsigned char> &hashBytes) const
+{
+    bool ret = false;
+
+    if (size() < 2)
+        return ret;
+
+    if (back() - 1 != OP_SIDECHAIN)
+        return ret;
+
+    sidechainObj *obj = sidechainObjCtr(*this);
+    if (!obj)
+        return ret;
+
+    // TODO
+    if (obj->sidechainop == 'A') {
+//        sidechainAdd *add = (sidechainAdd *) obj;
+//        hashBytes = vector<unsigned char> (add->keyID.begin(), add->keyID.end());
+//        delete add;
+        ret = true;
+    }
+    else
+    if (obj->sidechainop == 'V') {
+//        sidechainVerify *verify = (sidechainVerify *) obj;
+//        hashBytes = vector<unsigned char> (verify->keyID.begin(), verify->keyID.end());
+//        delete verify;
+        ret = true;
+    }
+    else if (obj->sidechainop == 'W') {
+//        sidechainWithdraw *withdraw = (sidechainWithdraw *) obj;
+//        hashBytes = vector<unsigned char> (withdraw->keyID.begin(), withdraw->keyID.end());
+//        delete withdraw;
+        ret = true;
+    }
+
+    return ret;
+}
+
+bool CScript::IsSidechainScript(void) const
+{
+    vector<unsigned char> hashBytes;
+    return IsSidechainScript(hashBytes);
 }

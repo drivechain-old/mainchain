@@ -9,16 +9,20 @@
 #include "checkpoints.h"
 #include "coins.h"
 #include "consensus/validation.h"
+#include "hash.h"
 #include "main.h"
 #include "policy/policy.h"
 #include "primitives/transaction.h"
+#include "primitives/sidechain.h"
 #include "rpc/server.h"
 #include "streams.h"
 #include "sync.h"
+#include "txdb.h"
 #include "txmempool.h"
 #include "util.h"
+#include "utilmoneystr.h"
 #include "utilstrencodings.h"
-#include "hash.h"
+#include "wallet/wallet.h"
 
 #include <stdint.h>
 
@@ -30,6 +34,7 @@ using namespace std;
 
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry);
 void ScriptPubKeyToJSON(const CScript& scriptPubKey, UniValue& out, bool fIncludeHex);
+extern CSidechainTreeDB *psidechaintree;
 
 double GetDifficulty(const CBlockIndex* blockindex)
 {
@@ -696,16 +701,150 @@ CScript _createsidechain_script(const UniValue& params)
 
 UniValue createsidechain(const UniValue& params, bool fHelp)
 {
+    if (fHelp || params.size() != 3)
+        throw runtime_error(
+            "createsidechain\n"
+            "\nReturns an object containing the txid and hash of the new sidechain.\n"
+            "\nArguments:\n"
+            "\n1. waitperiod                (numeric )"
+            "\n2. verificationperiod        (numeric )"
+            "\n3. minworkscore              (numeric )"
+            "\nResult:\n"
+            "object       sidechain\n"
+            "\nExamples:\n"
+            + HelpExampleCli("createsidechain\n", "")
+            + HelpExampleRpc("createsidechain\n", "")
+        );
+
+    if (!psidechaintree) {
+        string strError = std::string("Error: NULL psidechaintree!");
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
+    EnsureWalletIsUnlocked();
+
+    struct sidechainAdd sidechain;
+    sidechain.waitPeriod = (uint16_t)params[0].get_int();
+    sidechain.verificationPeriod = (uint16_t)params[1].get_int();
+    sidechain.minWorkScore = (uint16_t)params[2].get_int();
+
+    // Check if duplicate sidechain
+    uint256 objid = sidechain.GetHash();
+    sidechainAdd duplicate = psidechaintree->GetSidechain(objid);
+    if (!duplicate.txid.IsNull()) {
+        string strError = std::string("Error: sidechainid ")
+            + objid.ToString() + " already exists!";
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
+    // Check that wallet is unlocked
+    string strError;
+    if (pwalletMain->IsLocked()) {
+        strError = "Error: Wallet locked, unable to create transaction!";
+        LogPrintf("createsidechain() : %s", strError);
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError);
+    }
+
+    // Key to send the change to
+    CReserveKey reserveKey(pwalletMain);
+
+    // Fee to create the sidechain
+    CAmount nFeeRequired;
+
+    vector<CRecipient> vecSend;
+    CRecipient recipient = {sidechain.GetScript(), 1000000, false};
+    vecSend.push_back(recipient);
+
+    int nChangePos = -1;
+
+    CWalletTx wtx;
+    if (!pwalletMain->CreateTransaction(vecSend, wtx, reserveKey, nFeeRequired, nChangePos, strError))
+    {
+        if (nFeeRequired > pwalletMain->GetBalance())
+            strError = strprintf(
+                "Error: This transaction requires a transaction fee of at least %s!",
+                FormatMoney(nFeeRequired));
+        LogPrintf("createsidechain() : %s\n", strError);
+        throw JSONRPCError(RPC_WALLET_ERROR, strError);
+    }
+    if (!pwalletMain->CommitTransaction(wtx, reserveKey))
+        throw JSONRPCError(RPC_WALLET_ERROR,
+            "Error: The createsidechain transaction was rejected!");
+
+    UniValue ret(UniValue::VOBJ);
+    ret.push_back(Pair("txid", wtx.GetHash().ToString()));
+    ret.push_back(Pair("sidechainid", objid.ToString()));
+    return ret;
+}
+
+UniValue getsidechain(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "getsidechain\n "
+            "Returns an object containing information about the sidechain.\n"
+            "\nResult:\n"
+            "{\n1. sidechainid       (u256 string)"
+            "}\n"
+            "\nExamples:\n"
+            + HelpExampleCli("getsidechain", "")
+            + HelpExampleRpc("getsidechain", "")
+        );
+
+    if (!psidechaintree) {
+        string strError = std::string("Error: NULL psidechaintree!");
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
+    uint256 id;
+    id.SetHex(params[0].get_str());
+
+    sidechainAdd sidechain = psidechaintree->GetSidechain(id);
+
+    if (sidechain.txid.IsNull()) {
+        string strError = std::string("Error: sidechainid ")
+                + id.ToString() + " not found!";
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
+    UniValue ret(UniValue::VOBJ);
+    ret.push_back(Pair("sidechainid", id.ToString()));
+    ret.push_back(Pair("txid", sidechain.txid.ToString()));
+    ret.push_back(Pair("nHeight", (int)sidechain.nHeight));
+
+    return ret;
+}
+
+UniValue getsidechainproposal(const UniValue& params, bool fHelp)
+{
     if (fHelp || params.size() != 0)
         throw runtime_error(
-            "createsidechain\n "
-            "Returns an object containing the txid and hash of the new sidechain.\n"
+            "getsidechainproposal\n "
+            "Returns an object containing information about the withdraw proposal.\n"
             "\nResult:\n"
             "{\n"
             "}\n"
             "\nExamples:\n"
-            + HelpExampleCli("createsidechain", "")
-            + HelpExampleRpc("createsidechain", "")
+            + HelpExampleCli("getsidechainproposal", "")
+            + HelpExampleRpc("getsidechainproposal", "")
+        );
+
+    UniValue ret(UniValue::VOBJ);
+    return ret;
+}
+
+UniValue getsidechainverification(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "getsidechainverification\n "
+            "Returns an object containing the verification status of a sidechain withdrawl.\n"
+            "\nResult:\n"
+            "{\n"
+            "}\n"
+            "\nExamples:\n"
+            + HelpExampleCli("getsidechainverification", "")
+            + HelpExampleRpc("getsidechainverification", "")
         );
 
     UniValue ret(UniValue::VOBJ);
@@ -1021,26 +1160,31 @@ UniValue reconsiderblock(const UniValue& params, bool fHelp)
 }
 
 static const CRPCCommand commands[] =
-{ //  category              name                      actor (function)         okSafeMode
-  //  --------------------- ------------------------  -----------------------  ----------
-    { "blockchain",         "createsidechain",        &createsidechain,        true  },
-    { "blockchain",         "getblockchaininfo",      &getblockchaininfo,      true  },
-    { "blockchain",         "getbestblockhash",       &getbestblockhash,       true  },
-    { "blockchain",         "getblockcount",          &getblockcount,          true  },
-    { "blockchain",         "getblock",               &getblock,               true  },
-    { "blockchain",         "getblockhash",           &getblockhash,           true  },
-    { "blockchain",         "getblockheader",         &getblockheader,         true  },
-    { "blockchain",         "getchaintips",           &getchaintips,           true  },
-    { "blockchain",         "getdifficulty",          &getdifficulty,          true  },
-    { "blockchain",         "getmempoolinfo",         &getmempoolinfo,         true  },
-    { "blockchain",         "getrawmempool",          &getrawmempool,          true  },
-    { "blockchain",         "gettxout",               &gettxout,               true  },
-    { "blockchain",         "gettxoutsetinfo",        &gettxoutsetinfo,        true  },
-    { "blockchain",         "verifychain",            &verifychain,            true  },
+{ //  category              name                        actor (function)           okSafeMode
+  //  --------------------- ------------------------    -----------------------    ----------
+    { "blockchain",         "createsidechain",          &createsidechain,          true  },
+
+    { "blockchain",         "getsidechain",             &getsidechain,             true  },
+    { "blockchain",         "getsidechainproposal",     &getsidechainproposal,     true  },
+    { "blockchain",         "getsidechainverification", &getsidechainverification, true  },
+
+    { "blockchain",         "getblockchaininfo",        &getblockchaininfo,        true  },
+    { "blockchain",         "getbestblockhash",         &getbestblockhash,         true  },
+    { "blockchain",         "getblockcount",            &getblockcount,            true  },
+    { "blockchain",         "getblock",                 &getblock,                 true  },
+    { "blockchain",         "getblockhash",             &getblockhash,             true  },
+    { "blockchain",         "getblockheader",           &getblockheader,           true  },
+    { "blockchain",         "getchaintips",             &getchaintips,             true  },
+    { "blockchain",         "getdifficulty",            &getdifficulty,            true  },
+    { "blockchain",         "getmempoolinfo",           &getmempoolinfo,           true  },
+    { "blockchain",         "getrawmempool",            &getrawmempool,            true  },
+    { "blockchain",         "gettxout",                 &gettxout,                 true  },
+    { "blockchain",         "gettxoutsetinfo",          &gettxoutsetinfo,          true  },
+    { "blockchain",         "verifychain",              &verifychain,              true  },
 
     /* Not shown in help */
-    { "hidden",             "invalidateblock",        &invalidateblock,        true  },
-    { "hidden",             "reconsiderblock",        &reconsiderblock,        true  },
+    { "hidden",             "invalidateblock",          &invalidateblock,          true  },
+    { "hidden",             "reconsiderblock",          &reconsiderblock,          true  },
 };
 
 void RegisterBlockchainRPCCommands(CRPCTable &tableRPC)

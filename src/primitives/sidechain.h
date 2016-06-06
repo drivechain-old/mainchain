@@ -7,6 +7,7 @@
 
 #include <limits.h>
 #include <string>
+#include <vector>
 #include "script/script.h"
 #include "serialize.h"
 #include "uint256.h"
@@ -38,6 +39,12 @@ sidechainObj *sidechainObjCtr(const CScript &);
  * Sidechain added to database
  */
 struct sidechainAdd : public sidechainObj {
+    string name;
+    string description;
+    uint16_t waitPeriod;
+    uint16_t verificationPeriod;
+    uint16_t minWorkScore;
+
     sidechainAdd(void) : sidechainObj() { sidechainop = 'A'; }
     virtual ~sidechainAdd(void) { }
 
@@ -45,7 +52,12 @@ struct sidechainAdd : public sidechainObj {
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
-        READWRITE(sidechainop);
+        READWRITE(name);
+        READWRITE(description);
+        READWRITE(waitPeriod);
+        READWRITE(waitPeriod);
+        READWRITE(verificationPeriod);
+        READWRITE(minWorkScore);
     }
 
     string ToString(void) const;
