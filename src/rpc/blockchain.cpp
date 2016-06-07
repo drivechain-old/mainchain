@@ -701,14 +701,16 @@ CScript _createsidechain_script(const UniValue& params)
 
 UniValue createsidechain(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() != 3)
+    if (fHelp || params.size() != 5)
         throw runtime_error(
             "createsidechain\n"
             "\nReturns an object containing the txid and hash of the new sidechain.\n"
             "\nArguments:\n"
-            "\n1. waitperiod                (numeric )"
-            "\n2. verificationperiod        (numeric )"
-            "\n3. minworkscore              (numeric )"
+            "\n1. name                      (string)"
+            "\n2. description               (string)"
+            "\n3. waitperiod                (numeric)"
+            "\n4. verificationperiod        (numeric)"
+            "\n5. minworkscore              (numeric)"
             "\nResult:\n"
             "object       sidechain\n"
             "\nExamples:\n"
@@ -724,9 +726,11 @@ UniValue createsidechain(const UniValue& params, bool fHelp)
     EnsureWalletIsUnlocked();
 
     struct sidechainAdd sidechain;
-    sidechain.waitPeriod = (uint16_t)params[0].get_int();
-    sidechain.verificationPeriod = (uint16_t)params[1].get_int();
-    sidechain.minWorkScore = (uint16_t)params[2].get_int();
+    sidechain.name = params[0].get_str();
+    sidechain.description = params[1].get_str();
+    sidechain.waitPeriod = (uint16_t)params[2].get_int();
+    sidechain.verificationPeriod = (uint16_t)params[3].get_int();
+    sidechain.minWorkScore = (uint16_t)params[4].get_int();
 
     // Check if duplicate sidechain
     uint256 objid = sidechain.GetHash();

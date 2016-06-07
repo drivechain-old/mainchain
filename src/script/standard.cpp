@@ -67,6 +67,14 @@ bool Solver(const CScript& scriptPubKey, txnouttype& typeRet, vector<vector<unsi
         return true;
     }
 
+    // Shortcut for sidechain transactions, which must always be in a particular format
+    vector<unsigned char> hashBytes;
+    if (scriptPubKey.IsSidechainScript(hashBytes)) {
+        typeRet = TX_SIDECHAIN;
+        vSolutionsRet.push_back(hashBytes);
+        return true;
+    }
+
     // Provably prunable, data-carrying output
     //
     // So long as script passes the IsUnspendable() test and all but the first
@@ -183,7 +191,7 @@ bool ExtractDestination(const CScript& scriptPubKey, CTxDestination& addressRet)
         addressRet = CKeyID(uint160(vSolutions[0]));
         return true;
     }
-    else if (whichType == TX_SCRIPTHASH)
+    else if (whichType == TX_SCRIPTHASH || whichType == TX_SIDECHAIN)
     {
         addressRet = CScriptID(uint160(vSolutions[0]));
         return true;
