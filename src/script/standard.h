@@ -48,10 +48,10 @@ enum txnouttype
     // 'standard' transaction types:
     TX_PUBKEY,
     TX_PUBKEYHASH,
-    TX_SCRIPTHASH,
+    TX_SCRIPTHASH,    
     TX_MULTISIG,
-    TX_NULL_DATA,
     TX_SIDECHAIN,
+    TX_NULL_DATA,
 };
 
 class CNoDestination {
