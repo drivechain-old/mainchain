@@ -855,6 +855,31 @@ UniValue getsidechainverification(const UniValue& params, bool fHelp)
     return ret;
 }
 
+UniValue receivesidechainwt(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "receivesidechainwt\n"
+            "Called by drivechain clients to announce their WT^ txid(s)\n"
+            "\nArguments:\n"
+            "1. \"txid\"        (string, required) The transaction id\n"
+            "\nExamples:\n"
+            + HelpExampleCli("receivesidechainwt", "\"txid\"")
+            + HelpExampleRpc("receivesidechainwt", "\"txid\"")
+        );
+
+    std::string strHash = params[0].get_str();
+    uint256 hash(uint256S(strHash));
+
+    sidechainWithdraw withdraw;
+    withdraw.proposaltxid = hash;
+
+    UniValue ret(UniValue::VOBJ);
+    ret.push_back(Pair("withdrawid", withdraw.GetHash().GetHex()));
+    return ret;
+}
+
+
 UniValue getblockchaininfo(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 0)
@@ -1171,6 +1196,8 @@ static const CRPCCommand commands[] =
     { "blockchain",         "getsidechain",             &getsidechain,             true  },
     { "blockchain",         "getsidechainproposal",     &getsidechainproposal,     true  },
     { "blockchain",         "getsidechainverification", &getsidechainverification, true  },
+
+    { "blockchain",         "receivesidechainwt",       &receivesidechainwt,       true  },
 
     { "blockchain",         "getblockchaininfo",        &getblockchaininfo,        true  },
     { "blockchain",         "getbestblockhash",         &getbestblockhash,         true  },
