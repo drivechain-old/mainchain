@@ -126,15 +126,14 @@ public:
     bool WriteSidechainIndex(const std::vector<std::pair<uint256, const sidechainObj *> > &list);
     bool WriteFlag(const std::string &name, bool fValue);
     bool ReadFlag(const std::string &name, bool &fValue);
-//    bool LoadBlockIndexGuts(boost::function<CBlockIndex*(const uint256&)> insertBlockIndex);
 
-    sidechainAdd GetSidechain(const uint256 & /* Sidechain ID */);
-    sidechainWithdraw *GetWithdrawProposal(const uint256 & /* Withdraw Proposal ID */);
-    sidechainVerify *GetVerification(const uint256 & /* Verification ID */);
+    bool GetSidechain(const uint256 & /* Sidechain ID */, sidechainSidechain sidechain);
+    bool GetWithdrawProposal(const uint256 & /* WT^ ID */, sidechainWithdraw withdraw);
+    bool GetVerification(const uint256 & /* Verification ID */, sidechainVerify verification);
 
-    vector<sidechainAdd *> GetSidechains(void);
-    vector<sidechainWithdraw *> GetWithdrawProposals(const uint256 & /* Sidechain ID */);
-    vector<sidechainVerify *> GetVerifications(const uint256 & /* Withdraw Proposal ID */);
+    vector<sidechainSidechain> GetSidechains(void);
+    vector<sidechainWithdraw> GetWithdrawProposals(const uint256 & /* Sidechain ID */);
+    vector<sidechainVerify> GetVerifications(const uint256 & /* WT^ ID */);
 };
 
 #endif // BITCOIN_TXDB_H

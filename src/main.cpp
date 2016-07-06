@@ -2438,9 +2438,11 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
                 size_t script_sz = scriptPubKey.size();
                 if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
                     continue;
+
                 sidechainObj *obj = sidechainObjCtr(scriptPubKey);
                 if (!obj)
                     continue;
+
                 obj->txid = tx.GetHash();
                 vSidechainObjects.push_back(std::make_pair(obj->GetHash(), obj));
             }
@@ -2450,6 +2452,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
             bool ret = psidechaintree->WriteSidechainIndex(vSidechainObjects);
             if (!ret)
                 return state.Error("Failed to write sidechain index!");
+
             for (size_t i = 0; i < vSidechainObjects.size(); i++)
                 delete vSidechainObjects[i].second;
         }
