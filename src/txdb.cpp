@@ -320,13 +320,64 @@ bool CSidechainTreeDB::GetVerification(const uint256 &objid, sidechainVerify ver
 }
 
 vector<sidechainSidechain> CSidechainTreeDB::GetSidechains(void) {
+    const char sidechainop = 'S';
+    ostringstream ss;
+    ss << sidechainop;
 
+    vector<sidechainSidechain> vSidechain;
+    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
+    for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+        boost::this_thread::interruption_point();
+
+        std::pair<char, uint256> key;
+        sidechainSidechain sidechain;
+        if (pcursor->GetKey(key) && key.first == sidechainop) {
+            if (pcursor->GetValue(sidechain))
+                vSidechain.push_back(sidechain);
+        }
+    }
+
+    return vSidechain;
 }
 
 vector<sidechainWithdraw> CSidechainTreeDB::GetWithdrawProposals(const uint256 &objid) {
+    const char withdrawop = 'w';
+    ostringstream ss;
+    ::Serialize(ss, make_pair(make_pair(withdrawop, objid), uint256()), SER_DISK, CLIENT_VERSION);
 
+    vector<sidechainWithdraw> vWithdraw;
+    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
+    for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+        boost::this_thread::interruption_point();
+
+        std::pair<char, uint256> key;
+        sidechainWithdraw withdraw;
+        if (pcursor->GetKey(key) && key.first == withdrawop) {
+            if (pcursor->GetValue(withdraw))
+                vWithdraw.push_back(withdraw);
+        }
+    }
+
+    return vWithdraw;
 }
 
 vector<sidechainVerify> CSidechainTreeDB::GetVerifications(const uint256 &objid) {
+    const char verifyop = 'v';
+    ostringstream ss;
+    ::Serialize(ss, make_pair(make_pair(verifyop, objid), uint256()), SER_DISK, CLIENT_VERSION);
 
+    vector<sidechainVerify> vVerify;
+    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
+    for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+        boost::this_thread::interruption_point();
+
+        std::pair<char, uint256> key;
+        sidechainVerify verify;
+        if (pcursor->GetKey(key) && key.first == verifyop) {
+            if (pcursor->GetValue(verify))
+                vVerify.push_back(verify);
+        }
+    }
+
+    return vVerify;
 }
