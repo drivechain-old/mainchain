@@ -20,6 +20,7 @@
 #include "primitives/transaction.h"
 #include "script/standard.h"
 #include "timedata.h"
+#include "txdb.h"
 #include "txmempool.h"
 #include "util.h"
 #include "utilmoneystr.h"
@@ -58,6 +59,81 @@ public:
     }
 };
 
+bool checkWithdraw(sidechainWithdraw withdraw, sidechainSidechain sidechain)
+{
+    // TODO
+
+    if (withdraw.sidechainid != sidechain.GetHash())
+        return false;
+
+    return true;
+}
+
+CTransaction getSidechainTX(sidechainSidechain sidechain, uint32_t height)
+{
+    CMutableTransaction mtx;
+
+    // Check that sidechain index is enabled
+    if (!psidechaintree) return mtx;
+
+    // Is there a WT^ for this sidechain?
+    // Get the withdraw proposals for this sidechain
+    vector<sidechainWithdraw> vWithdraw = psidechaintree->GetWithdrawProposals(sidechain.GetHash());
+    vector<sidechainWithdraw> vCurrentWithdraw;
+    for (size_t i = 0; i < vWithdraw.size(); i++) {
+        if (vWithdraw[i].nHeight <= height &&
+            vWithdraw[i].nHeight > ((height - sidechain.waitPeriod) - sidechain.verificationPeriod))
+        {
+            vCurrentWithdraw.push_back(vWithdraw[i]);
+        }
+    }
+
+    // Check WT^ requests, update scores / broadcast payout
+    if (vCurrentWithdraw.size())
+    {
+        sidechainWithdraw withdraw; // WT^ with the most verifications
+        uint32_t workScore = 0;
+
+        // Find the WT^ with the most verifications
+        for (size_t x = 0; x < vCurrentWithdraw.size(); x++) {
+            vector<sidechainVerify> vVerify = psidechaintree->GetVerifications(vCurrentWithdraw[x].GetHash());
+
+            // Go through verifications for this WT^
+            for (size_t y = 0; y < vVerify.size(); y++) {
+                if (vVerify[y].workScore > workScore) {
+                    withdraw = vCurrentWithdraw[x];
+                    workScore = vVerify[y].workScore;
+                }
+            }
+        }
+
+        if (workScore >= sidechain.minWorkScore) {
+            // Append WT^ to mtx
+            if (checkWithdraw(withdraw, sidechain)) {
+                // TODO proper withdraw format
+            }
+        } else {
+            // Update work score
+            sidechainVerify newScore;
+            newScore.nHeight = height;
+            newScore.workScore = workScore;
+            newScore.wtxid = withdraw.proposaltxid;
+
+            if (checkWithdraw(withdraw, sidechain)) {
+                // upvote
+                newScore.workScore += 1;
+            } else {
+                // downvote
+                newScore.workScore -= 1;
+            }
+            // Add new work score to mtx
+            mtx.vout.push_back(CTxOut(1000000, newScore.GetScript()));
+        }
+    }
+
+    return mtx;
+}
+
 int64_t UpdateTime(CBlockHeader* pblock, const Consensus::Params& consensusParams, const CBlockIndex* pindexPrev)
 {
     int64_t nOldTime = pblock->nTime;
@@ -92,6 +168,15 @@ CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& s
     pblock->vtx.push_back(CTransaction());
     pblocktemplate->vTxFees.push_back(-1); // updated at end
     pblocktemplate->vTxSigOps.push_back(-1); // updated at end
+
+    // Create sidechain txs
+    uint32_t height = chainActive.Height() + 1;
+    vector<sidechainSidechain> sidechains = psidechaintree->GetSidechains();
+    for (size_t i = 0; i < sidechains.size(); i++) {
+        CTransaction sctx = getSidechainTX(sidechains[i], height);
+        if (sctx.vout.size())
+            pblock->vtx.push_back(sctx);
+    }
 
     // Largest block you're willing to create:
     unsigned int nBlockMaxSize = GetArg("-blockmaxsize", DEFAULT_BLOCK_MAX_SIZE);
