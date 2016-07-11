@@ -701,16 +701,14 @@ CScript _createsidechain_script(const UniValue& params)
 
 UniValue createsidechain(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() != 5)
+    if (fHelp || params.size() != 3)
         throw runtime_error(
             "createsidechain\n"
             "\nReturns an object containing the txid and hash of the new sidechain.\n"
             "\nArguments:\n"
-            "\n1. name                      (string)"
-            "\n2. description               (string)"
-            "\n3. waitperiod                (numeric)"
-            "\n4. verificationperiod        (numeric)"
-            "\n5. minworkscore              (numeric)"
+            "\n1. waitperiod                (numeric)"
+            "\n2. verificationperiod        (numeric)"
+            "\n30. minworkscore              (numeric)"
             "\nResult:\n"
             "object       sidechain\n"
             "\nExamples:\n"
@@ -725,17 +723,14 @@ UniValue createsidechain(const UniValue& params, bool fHelp)
 
     EnsureWalletIsUnlocked();
 
-    struct sidechainAdd sidechain;
-    sidechain.name = params[0].get_str();
-    sidechain.description = params[1].get_str();
-    sidechain.waitPeriod = (uint16_t)params[2].get_int();
-    sidechain.verificationPeriod = (uint16_t)params[3].get_int();
-    sidechain.minWorkScore = (uint16_t)params[4].get_int();
+    struct sidechainSidechain sidechain;
+    sidechain.waitPeriod = (uint16_t)params[0].get_int();
+    sidechain.verificationPeriod = (uint16_t)params[1].get_int();
+    sidechain.minWorkScore = (uint16_t)params[2].get_int();
 
     // Check if duplicate sidechain
     uint256 objid = sidechain.GetHash();
-    sidechainAdd duplicate = psidechaintree->GetSidechain(objid);
-    if (!duplicate.txid.IsNull()) {
+    if (psidechaintree->GetSidechain(objid, sidechainSidechain())) {
         string strError = std::string("Error: sidechainid ")
             + objid.ToString() + " already exists!";
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
@@ -803,9 +798,9 @@ UniValue getsidechain(const UniValue& params, bool fHelp)
     uint256 id;
     id.SetHex(params[0].get_str());
 
-    sidechainAdd sidechain = psidechaintree->GetSidechain(id);
+    sidechainSidechain sidechain;
 
-    if (sidechain.txid.IsNull()) {
+    if (!psidechaintree->GetSidechain(id, sidechain)) {
         string strError = std::string("Error: sidechainid ")
                 + id.ToString() + " not found!";
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
@@ -854,6 +849,31 @@ UniValue getsidechainverification(const UniValue& params, bool fHelp)
     UniValue ret(UniValue::VOBJ);
     return ret;
 }
+
+UniValue receivesidechainwt(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "receivesidechainwt\n"
+            "Called by drivechain clients to announce their WT^ txid(s)\n"
+            "\nArguments:\n"
+            "1. \"txid\"        (string, required) The transaction id\n"
+            "\nExamples:\n"
+            + HelpExampleCli("receivesidechainwt", "\"txid\"")
+            + HelpExampleRpc("receivesidechainwt", "\"txid\"")
+        );
+
+    std::string strHash = params[0].get_str();
+    uint256 hash(uint256S(strHash));
+
+    sidechainWithdraw withdraw;
+    withdraw.proposaltxid = hash;
+
+    UniValue ret(UniValue::VOBJ);
+    ret.push_back(Pair("withdrawid", withdraw.GetHash().GetHex()));
+    return ret;
+}
+
 
 UniValue getblockchaininfo(const UniValue& params, bool fHelp)
 {
@@ -1171,6 +1191,8 @@ static const CRPCCommand commands[] =
     { "blockchain",         "getsidechain",             &getsidechain,             true  },
     { "blockchain",         "getsidechainproposal",     &getsidechainproposal,     true  },
     { "blockchain",         "getsidechainverification", &getsidechainverification, true  },
+
+    { "blockchain",         "receivesidechainwt",       &receivesidechainwt,       true  },
 
     { "blockchain",         "getblockchaininfo",        &getblockchaininfo,        true  },
     { "blockchain",         "getbestblockhash",         &getbestblockhash,         true  },

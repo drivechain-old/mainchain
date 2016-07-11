@@ -38,23 +38,19 @@ sidechainObj *sidechainObjCtr(const CScript &);
 /**
  * Sidechain added to database
  */
-struct sidechainAdd : public sidechainObj {
-    string name;
-    string description;
+struct sidechainSidechain : public sidechainObj {
     uint16_t waitPeriod;
     uint16_t verificationPeriod;
     uint16_t minWorkScore;
 
-    sidechainAdd(void) : sidechainObj() { sidechainop = 'A'; }
-    virtual ~sidechainAdd(void) { }
+    sidechainSidechain(void) : sidechainObj() { sidechainop = 'S'; }
+    virtual ~sidechainSidechain(void) { }
 
     ADD_SERIALIZE_METHODS
 
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
-        READWRITE(name);
-        READWRITE(description);
-        READWRITE(waitPeriod);
+        READWRITE(sidechainop);
         READWRITE(waitPeriod);
         READWRITE(verificationPeriod);
         READWRITE(minWorkScore);
@@ -84,12 +80,17 @@ struct sidechainWithdraw : public sidechainObj {
     string ToString(void) const;
 };
 
+// TODO finish
+
 /**
  * Sidechain proposal verification (verified if verify = true, rejected otherwise)
+ * Two verification types:
+ * (1) "full vote" with the full serialization of the sidechain / WT^
+ * (2) "compressed vote" with the head of the serialization data (and score).
  */
 struct sidechainVerify : public sidechainObj {
-    bool verify;
-    uint256 withdrawid;
+    uint32_t workScore; // To be checked by OP_CHECKWORKSCOREVERIFY
+    uint256 wtxid;
 
     sidechainVerify(void) : sidechainObj() { sidechainop = 'V'; }
     virtual ~sidechainVerify(void) { }
@@ -99,8 +100,8 @@ struct sidechainVerify : public sidechainObj {
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(sidechainop);
-        READWRITE(verify);
-        READWRITE(withdrawid);
+        READWRITE(workScore);
+        READWRITE(wtxid);
     }
 
     string ToString(void) const;

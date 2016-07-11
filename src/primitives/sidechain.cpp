@@ -15,8 +15,8 @@ const uint32_t nVersion = 1;
 uint256 sidechainObj::GetHash(void) const
 {
     uint256 ret;
-    if (sidechainop == 'A')
-        ret = SerializeHash(*(sidechainAdd *) this);
+    if (sidechainop == 'S')
+        ret = SerializeHash(*(sidechainSidechain *) this);
     else
     if (sidechainop == 'W')
         ret = SerializeHash(*(sidechainWithdraw *) this);
@@ -31,8 +31,8 @@ CScript sidechainObj::GetScript(void) const
 {
     CDataStream ds (SER_DISK, CLIENT_VERSION);
 
-    if (sidechainop == 'A')
-        ((sidechainAdd *) this)->Serialize(ds, nType, nVersion);
+    if (sidechainop == 'S')
+        ((sidechainSidechain *) this)->Serialize(ds, nType, nVersion);
     else
     if (sidechainop == 'W')
         ((sidechainWithdraw *) this)->Serialize(ds, nType, nVersion);
@@ -55,22 +55,22 @@ sidechainObj *sidechainObjCtr(const CScript &script)
         return NULL;
     if (vch.size() == 0)
         return NULL;
-    const char *vchOP = (const char *) &vch.begin()[0];
-    CDataStream ds(vchOP, vchOP+vch.size(), SER_DISK, CLIENT_VERSION);
+    const char *vch0 = (const char *) &vch.begin()[0];
+    CDataStream ds(vch0, vch0+vch.size(), SER_DISK, CLIENT_VERSION);
 
-    if (*vchOP == 'A') {
-        sidechainAdd *obj = new sidechainAdd;
+    if (*vch0 == 'S') {
+        sidechainSidechain *obj = new sidechainSidechain;
         obj->Unserialize(ds, nType, nVersion);
         return obj;
     }
     else
-    if (*vchOP == 'W') {
+    if (*vch0 == 'W') {
         sidechainWithdraw *obj = new sidechainWithdraw;
         obj->Unserialize(ds, nType, nVersion);
         return obj;
     }
     else
-    if (*vchOP == 'V') {
+    if (*vch0 == 'V') {
         sidechainVerify *obj = new sidechainVerify;
         obj->Unserialize(ds, nType, nVersion);
         return obj;
@@ -88,12 +88,15 @@ string sidechainObj::ToString(void) const
     return str.str();
 }
 
-string sidechainAdd::ToString() const
+string sidechainSidechain::ToString() const
 {
     stringstream str;
     str << "sidechainop=" << sidechainop << endl;
     str << "nHeight=" << nHeight << endl;
     str << "txid=" << txid.GetHex() << endl;
+    str << "waitPeriod=" << waitPeriod << endl;
+    str << "verificationPeriod=" << verificationPeriod << endl;
+    str << "minWorkScore=" << minWorkScore << endl;
     return str.str();
 }
 
@@ -112,8 +115,8 @@ string sidechainVerify::ToString() const
     stringstream str;
     str << "sidechainop=" << sidechainop << endl;
     str << "nHeight=" << nHeight << endl;
-    str << "txid=" << txid.GetHex() << endl;
-    str << "verify=" << verify << endl;
+    str << "wtxid=" << wtxid.GetHex() << endl;
+    str << "workScore=" << workScore << endl;
 
     return str.str();
 }

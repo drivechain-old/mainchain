@@ -14,7 +14,7 @@
 
 #include <boost/thread.hpp>
 
-#include <leveldb/db.h>
+#include "dbwrapper.h"
 
 using namespace std;
 
@@ -260,9 +260,9 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
         const sidechainObj *obj = it->second;
         pair<char, uint256> key = make_pair(obj->sidechainop, objid);
 
-        if (obj->sidechainop == 'A') {
-            const sidechainAdd *ptr = (const sidechainAdd *) obj;
-            pair<sidechainAdd, uint256> value = make_pair(*ptr, obj->txid);
+        if (obj->sidechainop == 'S') {
+            const sidechainSidechain *ptr = (const sidechainSidechain *) obj;
+            pair<sidechainSidechain, uint256> value = make_pair(*ptr, obj->txid);
             batch.Write(key, value);
         }
         else
@@ -277,7 +277,7 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
             const sidechainVerify *ptr = (const sidechainVerify *) obj;
             pair<sidechainVerify, uint256> value = make_pair(*ptr, obj->txid);
             batch.Write(key, value);
-            batch.Write(make_pair(make_pair('v', ptr->withdrawid), objid), value);
+            batch.Write(make_pair(make_pair('v', ptr->wtxid), objid), value);
         }
     }
 
@@ -298,48 +298,35 @@ bool CSidechainTreeDB::ReadFlag(const string &name, bool &fValue)
     return true;
 }
 
-sidechainAdd CSidechainTreeDB::GetSidechain(const uint256 &objid) {
-    pair<char, uint256> idx = make_pair('A', objid);
-    ostringstream ss;
-    ::Serialize(ss, idx, SER_DISK, CLIENT_VERSION);
-    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
-    pcursor->Seek(ss.str());
+bool CSidechainTreeDB::GetSidechain(const uint256 &objid, sidechainSidechain sidechain) {
+    if (Read(make_pair('S', objid), sidechain))
+        return true;
 
-    if (pcursor->Valid()) {
-        try {
-            std::pair<char, uint256> key;
-            pcursor->GetKey(key);
-
-            if (key == idx) {
-                sidechainAdd add;
-                pcursor->GetValue(add);
-
-                return add;
-            }
-
-        } catch (const std::exception& e) {
-            error("%s: %s", __func__, e.what());
-        }
-    }
-    return sidechainAdd();
+    return false;
 }
 
-sidechainWithdraw* GetWithdrawProposal(const uint256 &objid /* Withdraw Proposal ID */) {
+bool CSidechainTreeDB::GetWithdrawProposal(const uint256 &objid, sidechainWithdraw withdraw) {
+    if (Read(make_pair('W', objid), withdraw))
+        return true;
+
+    return false;
+}
+
+bool CSidechainTreeDB::GetVerification(const uint256 &objid, sidechainVerify verify) {
+    if (Read(make_pair('V', objid), verify))
+        return true;
+
+    return false;
+}
+
+vector<sidechainSidechain> CSidechainTreeDB::GetSidechains(void) {
 
 }
 
-sidechainVerify* CSidechainTreeDB::GetVerification(const uint256 &objid /* Verification ID */) {
+vector<sidechainWithdraw> CSidechainTreeDB::GetWithdrawProposals(const uint256 &objid) {
 
 }
 
-vector<sidechainAdd *> CSidechainTreeDB::GetSidechains(void) {
-
-}
-
-vector<sidechainWithdraw *> GetWithdrawProposals(const uint256 &objid /* Sidechain ID */) {
-
-}
-
-vector<sidechainVerify *> GetVerifications(const uint256 &objid /* Withdraw Proposal ID */) {
+vector<sidechainVerify> CSidechainTreeDB::GetVerifications(const uint256 &objid) {
 
 }
