@@ -11,9 +11,11 @@
 #include "crypto/sha256.h"
 #include "pubkey.h"
 #include "script/script.h"
-#include "uint256.h"
+#include "txdb.h"
 
 using namespace std;
+
+extern CSidechainTreeDB *psidechaintree;
 
 typedef vector<unsigned char> valtype;
 
@@ -333,12 +335,13 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
 
                 case OP_CHECKWORKSCOREVERIFY:
                 {
-//                ...which freezes coins, such that they can only be moved if...
-//                ...they are spent by a transaction where...
-//                ...the tx-ID matches a Withdrawal Entry in the MinerDB...
-//                ...and the Withdrawal Entry has achieved the appropriate 'miner score' (see below).
-                  if (stack.size() < 2)
-                      return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+                    // Freezes coins, such that they can only be moved if
+                    // they are spent by a transaction where the tx-ID matches
+                    // a Withdrawal Entry in the MinerDB and the Withdrawal
+                    // Entry has achieved the appropriate workScore.
+                    if (stack.size() < 1)
+                        return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+
                 }
 
                 case OP_CHECKLOCKTIMEVERIFY:
@@ -1247,6 +1250,11 @@ bool TransactionSignatureChecker::CheckSequence(const CScriptNum& nSequence) con
         return false;
 
     return true;
+}
+
+bool TransactionSignatureChecker::CheckWorkScore(const CScriptNum& workScore, const CScript& script) const
+{
+    return false;
 }
 
 bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* serror)
