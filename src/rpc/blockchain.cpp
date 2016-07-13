@@ -814,19 +814,27 @@ UniValue getsidechain(const UniValue& params, bool fHelp)
     return ret;
 }
 
-UniValue getsidechainproposal(const UniValue& params, bool fHelp)
+UniValue getsidechainwithdraw(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || params.size() != 1)
         throw runtime_error(
-            "getsidechainproposal\n "
+            "getsidechainwithdraw\n "
             "Returns an object containing information about the withdraw proposal.\n"
             "\nResult:\n"
             "{\n"
             "}\n"
             "\nExamples:\n"
-            + HelpExampleCli("getsidechainproposal", "")
-            + HelpExampleRpc("getsidechainproposal", "")
+            + HelpExampleCli("getsidechainwithdraw", "")
+            + HelpExampleRpc("getsidechainwithdraw", "")
         );
+
+    if (!psidechaintree) {
+        string strError = std::string("Error: NULL psidechaintree!");
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
+    uint256 id;
+    id.SetHex(params[0].get_str());
 
     UniValue ret(UniValue::VOBJ);
     return ret;
@@ -834,7 +842,7 @@ UniValue getsidechainproposal(const UniValue& params, bool fHelp)
 
 UniValue getsidechainverification(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() != 0)
+    if (fHelp || params.size() != 1)
         throw runtime_error(
             "getsidechainverification\n "
             "Returns an object containing the verification status of a sidechain withdrawl.\n"
@@ -846,8 +854,132 @@ UniValue getsidechainverification(const UniValue& params, bool fHelp)
             + HelpExampleRpc("getsidechainverification", "")
         );
 
+    if (!psidechaintree) {
+        string strError = std::string("Error: NULL psidechaintree!");
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
+    uint256 id;
+    id.SetHex(params[0].get_str());
+
     UniValue ret(UniValue::VOBJ);
     return ret;
+}
+
+UniValue listsidechains(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 0)
+        throw runtime_error(
+            "listsidechains\n "
+            "Returns list of existing sidechains.\n"
+            "\nResult:\n"
+            "{\n"
+            "}\n"
+            "\nExamples:\n"
+            + HelpExampleCli("listsidechains", "")
+            + HelpExampleRpc("listsidechains", "")
+        );
+
+    if (!psidechaintree) {
+        string strError = std::string("Error: NULL psidechaintree!");
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
+    vector<sidechainSidechain> vec = psidechaintree->GetSidechains();
+
+    UniValue res(UniValue::VARR);
+
+    for (size_t i = 0; i < vec.size(); i++) {
+        const sidechainSidechain sidechain = vec[i];
+
+        UniValue obj(UniValue::VOBJ);
+        obj.push_back(Pair("id", sidechain.GetHash().GetHex()));
+        obj.push_back(Pair("nHeight", (int)sidechain.nHeight));
+
+        res.push_back(obj);
+    }
+
+    return res;
+}
+
+UniValue listsidechainwithdraws(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "listsidechainwithdraws\n "
+            "Returns list of sidechain withdraw proposals.\n"
+            "\nResult:\n"
+            "{\n"
+            "}\n"
+            "\nExamples:\n"
+            + HelpExampleCli("listsidechainwithdraws", "")
+            + HelpExampleRpc("listsidechainwithdraws", "")
+        );
+
+    if (!psidechaintree) {
+        string strError = std::string("Error: NULL psidechaintree!");
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
+    uint256 id;
+    id.SetHex(params[0].get_str());
+
+    vector<sidechainWithdraw> vec = psidechaintree->GetWithdrawProposals(id);
+
+    UniValue res(UniValue::VARR);
+
+    for (size_t i = 0; i < vec.size(); i++) {
+        const sidechainWithdraw withdraw = vec[i];
+
+        UniValue obj(UniValue::VOBJ);
+        obj.push_back(Pair("id", withdraw.GetHash().GetHex()));
+        obj.push_back(Pair("nHeight", (int)withdraw.nHeight));
+
+        res.push_back(obj);
+    }
+
+    return res;
+}
+
+UniValue listsidechainverifications(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "listsidechainverifications\n "
+            "Returns a list of sidechain verifications.\n"
+            "\nResult:\n"
+            "{\n"
+            "}\n"
+            "\nExamples:\n"
+            + HelpExampleCli("listsidechainverifications", "")
+            + HelpExampleRpc("listsidechainverifications", "")
+        );
+
+    if (!psidechaintree) {
+        string strError = std::string("Error: NULL psidechaintree!");
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
+    uint256 id;
+    id.SetHex(params[0].get_str());
+
+    vector<sidechainVerify> vec = psidechaintree->GetVerifications(id);
+
+    UniValue res(UniValue::VARR);
+
+    for (size_t i = 0; i < vec.size(); i++) {
+        const sidechainVerify verify = vec[i];
+
+        UniValue obj(UniValue::VOBJ);
+        obj.push_back(Pair("id", verify.GetHash().GetHex()));
+        obj.push_back(Pair("nHeight", (int)verify.nHeight));
+        obj.push_back(Pair("workScore", (int)verify.workScore));
+        obj.push_back(Pair("wtxid", verify.wtxid.GetHex()));
+
+        res.push_back(obj);
+    }
+
+    return res;
 }
 
 UniValue receivesidechainwt(const UniValue& params, bool fHelp)
@@ -862,6 +994,11 @@ UniValue receivesidechainwt(const UniValue& params, bool fHelp)
             + HelpExampleCli("receivesidechainwt", "\"txid\"")
             + HelpExampleRpc("receivesidechainwt", "\"txid\"")
         );
+
+    if (!psidechaintree) {
+        string strError = std::string("Error: NULL psidechaintree!");
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
 
     std::string strHash = params[0].get_str();
     uint256 hash(uint256S(strHash));
@@ -1184,33 +1321,36 @@ UniValue reconsiderblock(const UniValue& params, bool fHelp)
 }
 
 static const CRPCCommand commands[] =
-{ //  category              name                        actor (function)           okSafeMode
-  //  --------------------- ------------------------    -----------------------    ----------
-    { "blockchain",         "createsidechain",          &createsidechain,          true  },
+{ //  category              name                          actor (function)             okSafeMode
+  //  --------------------- ------------------------      -----------------------      ----------
+    { "blockchain",         "createsidechain",            &createsidechain,            true  },
 
-    { "blockchain",         "getsidechain",             &getsidechain,             true  },
-    { "blockchain",         "getsidechainproposal",     &getsidechainproposal,     true  },
-    { "blockchain",         "getsidechainverification", &getsidechainverification, true  },
+    { "blockchain",         "getsidechain",               &getsidechain,               true  },
+    { "blockchain",         "getsidechainwithdraw",       &getsidechainwithdraw,       true  },
+    { "blockchain",         "getsidechainverification",   &getsidechainverification,   true  },
+    { "blockchain",         "listsidechains",             &listsidechains,             true  },
+    { "blockchain",         "listsidechainwithdraws",     &listsidechainwithdraws,     true  },
+    { "blockchain",         "listsidechainverifications", &listsidechainverifications, true  },
 
-    { "blockchain",         "receivesidechainwt",       &receivesidechainwt,       true  },
+    { "blockchain",         "receivesidechainwt",         &receivesidechainwt,         true  },
 
-    { "blockchain",         "getblockchaininfo",        &getblockchaininfo,        true  },
-    { "blockchain",         "getbestblockhash",         &getbestblockhash,         true  },
-    { "blockchain",         "getblockcount",            &getblockcount,            true  },
-    { "blockchain",         "getblock",                 &getblock,                 true  },
-    { "blockchain",         "getblockhash",             &getblockhash,             true  },
-    { "blockchain",         "getblockheader",           &getblockheader,           true  },
-    { "blockchain",         "getchaintips",             &getchaintips,             true  },
-    { "blockchain",         "getdifficulty",            &getdifficulty,            true  },
-    { "blockchain",         "getmempoolinfo",           &getmempoolinfo,           true  },
-    { "blockchain",         "getrawmempool",            &getrawmempool,            true  },
-    { "blockchain",         "gettxout",                 &gettxout,                 true  },
-    { "blockchain",         "gettxoutsetinfo",          &gettxoutsetinfo,          true  },
-    { "blockchain",         "verifychain",              &verifychain,              true  },
+    { "blockchain",         "getblockchaininfo",          &getblockchaininfo,          true  },
+    { "blockchain",         "getbestblockhash",           &getbestblockhash,           true  },
+    { "blockchain",         "getblockcount",              &getblockcount,              true  },
+    { "blockchain",         "getblock",                   &getblock,                   true  },
+    { "blockchain",         "getblockhash",               &getblockhash,               true  },
+    { "blockchain",         "getblockheader",             &getblockheader,             true  },
+    { "blockchain",         "getchaintips",               &getchaintips,               true  },
+    { "blockchain",         "getdifficulty",              &getdifficulty,              true  },
+    { "blockchain",         "getmempoolinfo",             &getmempoolinfo,             true  },
+    { "blockchain",         "getrawmempool",              &getrawmempool,              true  },
+    { "blockchain",         "gettxout",                   &gettxout,                   true  },
+    { "blockchain",         "gettxoutsetinfo",            &gettxoutsetinfo,            true  },
+    { "blockchain",         "verifychain",                &verifychain,                true  },
 
     /* Not shown in help */
-    { "hidden",             "invalidateblock",          &invalidateblock,          true  },
-    { "hidden",             "reconsiderblock",          &reconsiderblock,          true  },
+    { "hidden",             "invalidateblock",            &invalidateblock,            true  },
+    { "hidden",             "reconsiderblock",            &reconsiderblock,            true  },
 };
 
 void RegisterBlockchainRPCCommands(CRPCTable &tableRPC)

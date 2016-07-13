@@ -7,6 +7,7 @@
 #define BITCOIN_MINER_H
 
 #include "primitives/block.h"
+#include "primitives/sidechain.h"
 
 #include <stdint.h>
 
@@ -26,6 +27,10 @@ struct CBlockTemplate
     std::vector<int64_t> vTxSigOps;
 };
 
+/** Check validity of WT^ */
+bool checkWithdraw(sidechainWithdraw withdraw, sidechainSidechain sidechain);
+/** Check sidechain WT^ transactions and update verification status */
+CTransaction getSidechainTX(sidechainSidechain sidechain, uint32_t height);
 /** Generate a new block, without valid proof-of-work */
 CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& scriptPubKeyIn);
 /** Modify the extranonce in a block */
