@@ -9,6 +9,7 @@
 #include "crypto/ripemd160.h"
 #include "crypto/sha1.h"
 #include "crypto/sha256.h"
+#include "main.h"
 #include "pubkey.h"
 #include "script/script.h"
 #include "txdb.h"
@@ -233,6 +234,10 @@ bool static CheckMinimalPush(const valtype& data, opcodetype opcode) {
 
 bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* serror)
 {
+    uint256 id;
+    sidechainSidechain sidechain;
+    psidechaintree->GetSidechain(id, sidechain);
+
     static const CScriptNum bnZero(0);
     static const CScriptNum bnOne(1);
     static const CScriptNum bnFalse(0);
