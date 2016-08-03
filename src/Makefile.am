@@ -168,6 +168,7 @@ libbitcoin_server_a_SOURCES = \
   httprpc.cpp \
   httpserver.cpp \
   init.cpp \
+  dbwrapper.cpp \
   main.cpp \
   merkleblock.cpp \
   miner.cpp \
@@ -187,6 +188,7 @@ libbitcoin_server_a_SOURCES = \
   script/ismine.cpp \
   timedata.cpp \
   torcontrol.cpp \
+  txdb.cpp \
   txmempool.cpp \
   ui_interface.cpp \
   validationinterface.cpp \
@@ -248,7 +250,6 @@ libbitcoin_consensus_a_SOURCES = \
   consensus/merkle.h \
   consensus/params.h \
   consensus/validation.h \
-  dbwrapper.cpp \
   hash.cpp \
   hash.h \
   prevector.h \
@@ -269,13 +270,11 @@ libbitcoin_consensus_a_SOURCES = \
   script/script_error.h \
   serialize.h \
   tinyformat.h \
-  txdb.cpp \
   uint256.cpp \
   uint256.h \
   utilstrencodings.cpp \
   utilstrencodings.h \
-  version.h \
-  $(BITCOIN_CORE_H)
+  version.h
 
 # common: shared between bitcoind, and bitcoin-qt and non-server tools
 libbitcoin_common_a_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES)
@@ -405,22 +404,16 @@ bitcoin_tx_LDADD += $(BOOST_LIBS) $(CRYPTO_LIBS)
 
 # bitcoinconsensus library #
 if BUILD_BITCOIN_LIBS
-include_HEADERS = script/bitcoinconsensus.h \
-									$(BITCOIN_CORE_H)
-libbitcoinconsensus_la_SOURCES = $(crypto_libbitcoin_crypto_a_SOURCES) \
-                                 $(libbitcoin_consensus_a_SOURCES)
+include_HEADERS = script/bitcoinconsensus.h
+libbitcoinconsensus_la_SOURCES = $(crypto_libbitcoin_crypto_a_SOURCES) $(libbitcoin_consensus_a_SOURCES)
 
 if GLIBC_BACK_COMPAT
   libbitcoinconsensus_la_SOURCES += compat/glibc_compat.cpp
 endif
 
 libbitcoinconsensus_la_LDFLAGS = $(AM_LDFLAGS) -no-undefined $(RELDFLAGS)
-libbitcoinconsensus_la_LIBADD = $(LIBSECP256K1) \
-                                $(LIBLEVELDB) \
-																$(BDB_LIBS) \
-                                $(LIBMEMENV)
-
-libbitcoinconsensus_la_CPPFLAGS = $(AM_CPPFLAGS) $(BITCOIN_INCLUDES) -I$(builddir)/obj -I$(srcdir)/secp256k1/include -DBUILD_BITCOIN_INTERNAL
+libbitcoinconsensus_la_LIBADD = $(LIBSECP256K1)
+libbitcoinconsensus_la_CPPFLAGS = $(AM_CPPFLAGS) $(LEVELDB_CPPFLAGS) -I$(builddir)/obj -I$(srcdir)/secp256k1/include -DBUILD_BITCOIN_INTERNAL
 libbitcoinconsensus_la_CXXFLAGS = $(AM_CXXFLAGS) $(PIE_FLAGS)
 
 endif
