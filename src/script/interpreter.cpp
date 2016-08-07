@@ -9,14 +9,11 @@
 #include "crypto/ripemd160.h"
 #include "crypto/sha1.h"
 #include "crypto/sha256.h"
-#include "main.h"
 #include "pubkey.h"
 #include "script/script.h"
-#include "txdb.h"
+#include "uint256.h"
 
 using namespace std;
-
-extern CSidechainTreeDB *psidechaintree;
 
 typedef vector<unsigned char> valtype;
 
@@ -234,10 +231,6 @@ bool static CheckMinimalPush(const valtype& data, opcodetype opcode) {
 
 bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* serror)
 {
-    uint256 id;
-    sidechainSidechain sidechain;
-    psidechaintree->GetSidechain(id, sidechain);
-
     static const CScriptNum bnZero(0);
     static const CScriptNum bnOne(1);
     static const CScriptNum bnFalse(0);
@@ -340,13 +333,12 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
 
                 case OP_CHECKWORKSCOREVERIFY:
                 {
-                    // Freezes coins, such that they can only be moved if
-                    // they are spent by a transaction where the tx-ID matches
-                    // a Withdrawal Entry in the MinerDB and the Withdrawal
-                    // Entry has achieved the appropriate workScore.
-                    if (stack.size() < 1)
-                        return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
-
+//                ...which freezes coins, such that they can only be moved if...
+//                ...they are spent by a transaction where...
+//                ...the tx-ID matches a Withdrawal Entry in the MinerDB...
+//                ...and the Withdrawal Entry has achieved the appropriate 'miner score' (see below).
+                  if (stack.size() < 2)
+                      return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
                 }
 
                 case OP_CHECKLOCKTIMEVERIFY:
@@ -1255,11 +1247,6 @@ bool TransactionSignatureChecker::CheckSequence(const CScriptNum& nSequence) con
         return false;
 
     return true;
-}
-
-bool TransactionSignatureChecker::CheckWorkScore(const CScriptNum& workScore, const CScript& script) const
-{
-    return false;
 }
 
 bool VerifyScript(const CScript& scriptSig, const CScript& scriptPubKey, unsigned int flags, const BaseSignatureChecker& checker, ScriptError* serror)

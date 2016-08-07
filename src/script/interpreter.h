@@ -110,11 +110,6 @@ public:
          return false;
     }
 
-    virtual bool CheckWorkScore(const CScriptNum& workScore, const CScript& script) const
-    {
-        return false;
-    }
-
     virtual ~BaseSignatureChecker() {}
 };
 
@@ -132,7 +127,6 @@ public:
     bool CheckSig(const std::vector<unsigned char>& scriptSig, const std::vector<unsigned char>& vchPubKey, const CScript& scriptCode) const;
     bool CheckLockTime(const CScriptNum& nLockTime) const;
     bool CheckSequence(const CScriptNum& nSequence) const;
-    bool CheckWorkScore(const CScriptNum& workScore, const CScript& script) const;
 };
 
 class MutableTransactionSignatureChecker : public TransactionSignatureChecker
