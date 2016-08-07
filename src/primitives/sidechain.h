@@ -80,6 +80,11 @@ struct sidechainWithdraw : public sidechainObj {
     string ToString(void) const;
 };
 
+/**
+ * Get sidechainWithdraw object
+ */
+sidechainWithdraw *GetWT(const CScript &script);
+
 // TODO finish
 
 /**
@@ -106,5 +111,7 @@ struct sidechainVerify : public sidechainObj {
 
     string ToString(void) const;
 };
+
+bool CheckVerifications(vector<sidechainVerify> vec);
 
 #endif // BITCOIN_PRIMITIVES_SIDECHAIN_H

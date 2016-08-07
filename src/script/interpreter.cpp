@@ -5,13 +5,13 @@
 
 #include "interpreter.h"
 
+#include "primitives/sidechain.h"
 #include "primitives/transaction.h"
 #include "crypto/ripemd160.h"
 #include "crypto/sha1.h"
 #include "crypto/sha256.h"
 #include "pubkey.h"
 #include "script/script.h"
-#include "uint256.h"
 
 using namespace std;
 
@@ -333,12 +333,14 @@ bool EvalScript(vector<vector<unsigned char> >& stack, const CScript& script, un
 
                 case OP_CHECKWORKSCOREVERIFY:
                 {
-//                ...which freezes coins, such that they can only be moved if...
-//                ...they are spent by a transaction where...
-//                ...the tx-ID matches a Withdrawal Entry in the MinerDB...
-//                ...and the Withdrawal Entry has achieved the appropriate 'miner score' (see below).
-                  if (stack.size() < 2)
-                      return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+                    // which freezes coins, such that they can only be moved
+                    // if they are spent by a transaction where the tx-ID matches
+                    // a Withdrawal Entry in the MinerDB and the Withdrawal Entry
+                    // has achieved the appropriate 'miner score' (see below).
+                    if (stack.size() < 2)
+                        return set_error(serror, SCRIPT_ERR_INVALID_STACK_OPERATION);
+
+                    sidechainWithdraw *wt = GetWT(script);
                 }
 
                 case OP_CHECKLOCKTIMEVERIFY:

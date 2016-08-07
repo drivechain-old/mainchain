@@ -1836,6 +1836,26 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
 
 bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, bool cacheStore, std::vector<CScriptCheck> *pvChecks)
 {
+    // Check inputs that want to spend from sidechain WT^
+    BOOST_FOREACH(const CTxOut& txout, tx.vout) {
+        const CScript& scriptPubKey = txout.scriptPubKey;
+        size_t script_sz = scriptPubKey.size();
+        if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
+            continue;
+
+        sidechainWithdraw *wt = GetWT(scriptPubKey);
+        if (!wt)
+            continue;
+
+        vector<sidechainVerify> verifications = psidechaintree->GetVerifications(wt->GetHash());
+
+        if (!verifications.size())
+            continue;
+
+        if (!CheckVerifications(verifications))
+            continue;
+    }
+
     if (!tx.IsCoinBase())
     {
         if (!Consensus::CheckTxInputs(tx, state, inputs, GetSpendHeight(inputs)))

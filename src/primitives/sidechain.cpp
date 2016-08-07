@@ -79,6 +79,33 @@ sidechainObj *sidechainObjCtr(const CScript &script)
     return NULL;
 }
 
+sidechainWithdraw *GetWT(const CScript &script)
+{
+    CScript::const_iterator pc = script.begin();
+    vector<unsigned char> vch;
+    opcodetype opcode;
+
+    if (!script.GetOp(pc, opcode, vch))
+        return NULL;
+    if (vch.size() == 0)
+        return NULL;
+    const char *vch0 = (const char *) &vch.begin()[0];
+    CDataStream ds(vch0, vch0+vch.size(), SER_DISK, CLIENT_VERSION);
+
+    if (*vch0 == 'W') {
+        sidechainWithdraw *obj = new sidechainWithdraw;
+        obj->Unserialize(ds, nType, nVersion);
+        return obj;
+    }
+
+    return NULL;
+}
+
+bool CheckVerifications(vector<sidechainVerify> vec)
+{
+    return true;
+}
+
 string sidechainObj::ToString(void) const
 {
     stringstream str;
