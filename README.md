@@ -3,6 +3,9 @@ Fork of [Bitcoin Core](https://github.com/bitcoin/bitcoin) -- adds Drivechain
 
 This is a demo of what would need to be changed, in Bitcoin, to allow it to support sidechains.
 
+<b>Do not test with existing wallet. Regtest mode suggested</b>  
+<i>Funcion receivesidechainwt creates a transaction automatically</i>
+
 See:
 
 1. [Drivechains blog post](http://www.truthcoin.info/blog/drivechain/) 
