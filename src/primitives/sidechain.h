@@ -112,6 +112,4 @@ struct sidechainVerify : public sidechainObj {
     string ToString(void) const;
 };
 
-bool CheckVerifications(vector<sidechainVerify> vec);
-
 #endif // BITCOIN_PRIMITIVES_SIDECHAIN_H

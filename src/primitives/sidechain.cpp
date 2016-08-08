@@ -101,11 +101,6 @@ sidechainWithdraw *GetWT(const CScript &script)
     return NULL;
 }
 
-bool CheckVerifications(vector<sidechainVerify> vec)
-{
-    return true;
-}
-
 string sidechainObj::ToString(void) const
 {
     stringstream str;

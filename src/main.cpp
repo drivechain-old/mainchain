@@ -1834,10 +1834,44 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
 }
 }// namespace Consensus
 
+bool CheckVerifications(sidechainWithdraw *wt)
+{
+    // TODO Improve this proof of concept
+
+    // Check WT^ pointer
+    if (!wt)
+        return false;
+
+    // Are there verifications?
+    vector<sidechainVerify> verifications = psidechaintree->GetVerifications(wt->GetHash());
+    if (!verifications.size())
+        return false;
+
+    // Lookup the sidechain that created the WT^
+    sidechainSidechain sidechain;
+    if (!psidechaintree->GetSidechain(wt->sidechainid, sidechain))
+        return false;
+
+    uint32_t workScore = 0;
+
+    // Go through verifications for this WT^
+    for (size_t y = 0; y < verifications.size(); y++) {
+        if (verifications[y].workScore > workScore)
+            workScore = verifications[y].workScore;
+    }
+
+    // Check work score
+    if (workScore >= sidechain.minWorkScore)
+        return true;
+
+    return false;
+}
+
 bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, bool cacheStore, std::vector<CScriptCheck> *pvChecks)
 {
     // Check inputs that want to spend from sidechain WT^
     BOOST_FOREACH(const CTxOut& txout, tx.vout) {
+        // TODO Improve this proof of concept
         const CScript& scriptPubKey = txout.scriptPubKey;
         size_t script_sz = scriptPubKey.size();
         if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
@@ -1847,12 +1881,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
         if (!wt)
             continue;
 
-        vector<sidechainVerify> verifications = psidechaintree->GetVerifications(wt->GetHash());
-
-        if (!verifications.size())
-            continue;
-
-        if (!CheckVerifications(verifications))
+        if (!CheckVerifications(wt))
             continue;
     }
 
