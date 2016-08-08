@@ -1855,9 +1855,9 @@ bool CheckVerifications(sidechainWithdraw *wt)
     uint32_t workScore = 0;
 
     // Go through verifications for this WT^
-    for (size_t y = 0; y < verifications.size(); y++) {
-        if (verifications[y].workScore > workScore)
-            workScore = verifications[y].workScore;
+    for (size_t i = 0; i < verifications.size(); i++) {
+        if (verifications[i].workScore > workScore)
+            workScore = verifications[i].workScore;
     }
 
     // Check work score
@@ -3975,7 +3975,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
             return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
         // check level 1: verify block validity
         if (nCheckLevel >= 1 && !CheckBlock(block, state))
-            return error("%s: *** found bad block at %d, hash=%s (%s)\n", __func__, 
+            return error("%s: *** found bad block at %d, hash=%s (%s)\n", __func__,
                          pindex->nHeight, pindex->GetBlockHash().ToString(), FormatStateMessage(state));
         // check level 2: verify undo validity
         if (nCheckLevel >= 2 && pindex) {
@@ -4066,7 +4066,7 @@ bool LoadBlockIndex()
     return true;
 }
 
-bool InitBlockIndex(const CChainParams& chainparams) 
+bool InitBlockIndex(const CChainParams& chainparams)
 {
     LOCK(cs_main);
 
