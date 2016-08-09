@@ -2,12 +2,15 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <vector>
-#include <sstream>
-#include "hash.h"
-#include "clientversion.h"
 #include "primitives/sidechain.h"
+
+#include "clientversion.h"
+#include "hash.h"
 #include "streams.h"
+#include "utilstrencodings.h"
+
+#include <sstream>
+#include <vector>
 
 const uint32_t nType = 1;
 const uint32_t nVersion = 1;
@@ -119,6 +122,7 @@ string sidechainSidechain::ToString() const
     str << "waitPeriod=" << waitPeriod << endl;
     str << "verificationPeriod=" << verificationPeriod << endl;
     str << "minWorkScore=" << minWorkScore << endl;
+    str << "depositPubKey=" << HexStr(depositPubKey) << endl;
     return str.str();
 }
 

@@ -42,6 +42,7 @@ struct sidechainSidechain : public sidechainObj {
     uint16_t waitPeriod;
     uint16_t verificationPeriod;
     uint16_t minWorkScore;
+    CScript depositPubKey;
 
     sidechainSidechain(void) : sidechainObj() { sidechainop = 'S'; }
     virtual ~sidechainSidechain(void) { }
@@ -54,6 +55,7 @@ struct sidechainSidechain : public sidechainObj {
         READWRITE(waitPeriod);
         READWRITE(verificationPeriod);
         READWRITE(minWorkScore);
+        READWRITE(*(CScriptBase*)(&depositPubKey));
     }
 
     string ToString(void) const;

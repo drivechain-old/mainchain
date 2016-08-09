@@ -1860,6 +1860,8 @@ bool CheckVerifications(sidechainWithdraw *wt)
             workScore = verifications[i].workScore;
     }
 
+    // TODO check time period, order and value  validity of votes
+
     // Check work score
     if (workScore >= sidechain.minWorkScore)
         return true;

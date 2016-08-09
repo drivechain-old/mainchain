@@ -693,9 +693,10 @@ static UniValue BIP9SoftForkDesc(const Consensus::Params& consensusParams, Conse
 /**
  * Used by createsidechain
  */
-CScript _createsidechain_script(const UniValue& params)
+CScript getSidechainDepositScript()
 {
     CScript sidechainScript;
+    sidechainScript << OP_TRUE;
     return sidechainScript;
 }
 
@@ -708,7 +709,7 @@ UniValue createsidechain(const UniValue& params, bool fHelp)
             "\nArguments:\n"
             "\n1. waitperiod                (numeric)"
             "\n2. verificationperiod        (numeric)"
-            "\n30. minworkscore              (numeric)"
+            "\n3. minworkscore              (numeric)"
             "\nResult:\n"
             "object       sidechain\n"
             "\nExamples:\n"
@@ -727,10 +728,12 @@ UniValue createsidechain(const UniValue& params, bool fHelp)
     sidechain.waitPeriod = (uint16_t)params[0].get_int();
     sidechain.verificationPeriod = (uint16_t)params[1].get_int();
     sidechain.minWorkScore = (uint16_t)params[2].get_int();
+    sidechain.depositPubKey = getSidechainDepositScript();
 
     // Check if duplicate sidechain
     uint256 objid = sidechain.GetHash();
-    if (psidechaintree->GetSidechain(objid, sidechainSidechain())) {
+    sidechainSidechain duplicate;
+    if (psidechaintree->GetSidechain(objid, duplicate)) {
         string strError = std::string("Error: sidechainid ")
             + objid.ToString() + " already exists!";
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
@@ -798,7 +801,7 @@ UniValue getsidechain(const UniValue& params, bool fHelp)
     uint256 id;
     id.SetHex(params[0].get_str());
 
-    sidechainSidechain sidechain;
+    struct sidechainSidechain sidechain;
 
     if (!psidechaintree->GetSidechain(id, sidechain)) {
         string strError = std::string("Error: sidechainid ")
@@ -806,10 +809,16 @@ UniValue getsidechain(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
     }
 
+    std::cout << "Got sidechain: " << sidechain.ToString();
+
     UniValue ret(UniValue::VOBJ);
     ret.push_back(Pair("sidechainid", id.ToString()));
     ret.push_back(Pair("txid", sidechain.txid.ToString()));
+    ret.push_back(Pair("minWorkScore", (int)sidechain.minWorkScore));
+    ret.push_back(Pair("verificationPeriod", (int)sidechain.verificationPeriod));
+    ret.push_back(Pair("waitPeriod", (int)sidechain.waitPeriod));
     ret.push_back(Pair("nHeight", (int)sidechain.nHeight));
+    ret.push_back(Pair("depositPubKey", HexStr(sidechain.depositPubKey)));
 
     return ret;
 }
