@@ -7,10 +7,8 @@
 #include "clientversion.h"
 #include "hash.h"
 #include "streams.h"
-#include "utilstrencodings.h"
 
 #include <sstream>
-#include <vector>
 
 const uint32_t nType = 1;
 const uint32_t nVersion = 1;
@@ -82,6 +80,7 @@ sidechainObj *sidechainObjCtr(const CScript &script)
     return NULL;
 }
 
+// TODO remove function (use casting & sidechainObjCreator)
 sidechainWithdraw *GetWT(const CScript &script)
 {
     CScript::const_iterator pc = script.begin();

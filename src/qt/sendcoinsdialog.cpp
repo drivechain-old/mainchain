@@ -13,6 +13,7 @@
 #include "optionsmodel.h"
 #include "platformstyle.h"
 #include "sendcoinsentry.h"
+#include "sidechaindepositdialog.h"
 #include "walletmodel.h"
 
 #include "base58.h"
@@ -318,6 +319,7 @@ void SendCoinsDialog::on_sendButton_clicked()
         questionString.arg(formatted.join("<br />")), SEND_CONFIRM_DELAY, this);
     confirmationDialog.exec();
     QMessageBox::StandardButton retval = (QMessageBox::StandardButton)confirmationDialog.result();
+
 
     if(retval != QMessageBox::Yes)
     {
@@ -872,4 +874,10 @@ void SendConfirmationDialog::updateYesButton()
         yesButton->setEnabled(true);
         yesButton->setText(tr("Yes"));
     }
+}
+
+void SendCoinsDialog::on_pushButtonSendSidechain_clicked()
+{
+    SidechainDepositDialog scDepDialog;
+    scDepDialog.exec();
 }

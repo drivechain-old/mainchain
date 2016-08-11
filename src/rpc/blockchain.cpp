@@ -809,8 +809,6 @@ UniValue getsidechain(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
     }
 
-    std::cout << "Got sidechain: " << sidechain.ToString();
-
     UniValue ret(UniValue::VOBJ);
     ret.push_back(Pair("sidechainid", id.ToString()));
     ret.push_back(Pair("txid", sidechain.txid.ToString()));

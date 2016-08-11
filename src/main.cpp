@@ -1854,13 +1854,17 @@ bool CheckVerifications(sidechainWithdraw *wt)
 
     uint32_t workScore = 0;
 
+    // Find out the height of the current most-worked-on chain
+    const CBlockIndex* pindex = chainActive.Tip();
+    const int nHeight = pindex->nHeight;
+
     // Go through verifications for this WT^
     for (size_t i = 0; i < verifications.size(); i++) {
         if (verifications[i].workScore > workScore)
             workScore = verifications[i].workScore;
     }
 
-    // TODO check time period, order and value  validity of votes
+    // TODO time period / order check
 
     // Check work score
     if (workScore >= sidechain.minWorkScore)
