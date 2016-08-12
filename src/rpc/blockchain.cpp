@@ -693,9 +693,10 @@ static UniValue BIP9SoftForkDesc(const Consensus::Params& consensusParams, Conse
 /**
  * Used by createsidechain
  */
-CScript _createsidechain_script(const UniValue& params)
+CScript getSidechainDepositScript()
 {
     CScript sidechainScript;
+    sidechainScript << OP_TRUE;
     return sidechainScript;
 }
 
@@ -708,7 +709,7 @@ UniValue createsidechain(const UniValue& params, bool fHelp)
             "\nArguments:\n"
             "\n1. waitperiod                (numeric)"
             "\n2. verificationperiod        (numeric)"
-            "\n30. minworkscore              (numeric)"
+            "\n3. minworkscore              (numeric)"
             "\nResult:\n"
             "object       sidechain\n"
             "\nExamples:\n"
@@ -727,10 +728,12 @@ UniValue createsidechain(const UniValue& params, bool fHelp)
     sidechain.waitPeriod = (uint16_t)params[0].get_int();
     sidechain.verificationPeriod = (uint16_t)params[1].get_int();
     sidechain.minWorkScore = (uint16_t)params[2].get_int();
+    sidechain.depositPubKey = getSidechainDepositScript();
 
     // Check if duplicate sidechain
     uint256 objid = sidechain.GetHash();
-    if (psidechaintree->GetSidechain(objid, sidechainSidechain())) {
+    sidechainSidechain duplicate;
+    if (psidechaintree->GetSidechain(objid, duplicate)) {
         string strError = std::string("Error: sidechainid ")
             + objid.ToString() + " already exists!";
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
@@ -780,7 +783,7 @@ UniValue getsidechain(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            "getsidechain\n "
+            "getsidechain \"sidechainid\"\n "
             "Returns an object containing information about the sidechain.\n"
             "\nResult:\n"
             "{\n1. sidechainid       (u256 string)"
@@ -798,7 +801,7 @@ UniValue getsidechain(const UniValue& params, bool fHelp)
     uint256 id;
     id.SetHex(params[0].get_str());
 
-    sidechainSidechain sidechain;
+    struct sidechainSidechain sidechain;
 
     if (!psidechaintree->GetSidechain(id, sidechain)) {
         string strError = std::string("Error: sidechainid ")
@@ -809,7 +812,11 @@ UniValue getsidechain(const UniValue& params, bool fHelp)
     UniValue ret(UniValue::VOBJ);
     ret.push_back(Pair("sidechainid", id.ToString()));
     ret.push_back(Pair("txid", sidechain.txid.ToString()));
+    ret.push_back(Pair("minWorkScore", (int)sidechain.minWorkScore));
+    ret.push_back(Pair("verificationPeriod", (int)sidechain.verificationPeriod));
+    ret.push_back(Pair("waitPeriod", (int)sidechain.waitPeriod));
     ret.push_back(Pair("nHeight", (int)sidechain.nHeight));
+    ret.push_back(Pair("depositPubKey", HexStr(sidechain.depositPubKey)));
 
     return ret;
 }
@@ -818,7 +825,7 @@ UniValue getsidechainwithdraw(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            "getsidechainwithdraw\n "
+            "getsidechainwithdraw \"withdrawid\"\n "
             "Returns an object containing information about the withdraw proposal.\n"
             "\nResult:\n"
             "{\n"
@@ -836,7 +843,20 @@ UniValue getsidechainwithdraw(const UniValue& params, bool fHelp)
     uint256 id;
     id.SetHex(params[0].get_str());
 
+    sidechainWithdraw withdraw;
+
+    if (!psidechaintree->GetWithdrawProposal(id, withdraw)) {
+        string strError = std::string("Error: withdrawid ")
+                + id.ToString() + " not found!";
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
     UniValue ret(UniValue::VOBJ);
+    ret.push_back(Pair("withdrawid", id.ToString()));
+    ret.push_back(Pair("proposaltxid", withdraw.proposaltxid.ToString()));
+    ret.push_back(Pair("sidechainid", withdraw.sidechainid.ToString()));
+    ret.push_back(Pair("txid", withdraw.txid.ToString()));
+    ret.push_back(Pair("nHeight", (int)withdraw.nHeight));
     return ret;
 }
 
@@ -844,7 +864,7 @@ UniValue getsidechainverification(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            "getsidechainverification\n "
+            "getsidechainverification \"verificationid\"\n "
             "Returns an object containing the verification status of a sidechain withdrawl.\n"
             "\nResult:\n"
             "{\n"
@@ -906,7 +926,7 @@ UniValue listsidechainwithdraws(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            "listsidechainwithdraws\n "
+            "listsidechainwithdraws \"sidechainid\"\n "
             "Returns list of sidechain withdraw proposals.\n"
             "\nResult:\n"
             "{\n"
@@ -945,7 +965,7 @@ UniValue listsidechainverifications(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
         throw runtime_error(
-            "listsidechainverifications\n "
+            "listsidechainverifications \"verificationid\"\n "
             "Returns a list of sidechain verifications.\n"
             "\nResult:\n"
             "{\n"
@@ -1000,17 +1020,62 @@ UniValue receivesidechainwt(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
     }
 
+    // Grab the WT from the sidechain
     std::string strHash = params[0].get_str();
     uint256 hash(uint256S(strHash));
 
     sidechainWithdraw withdraw;
     withdraw.proposaltxid = hash;
 
+    // Add the WT to the sidechain index
+    EnsureWalletIsUnlocked();
+
+    // Check if duplicate WT
+    uint256 objid = withdraw.GetHash();
+    if (psidechaintree->GetWithdrawProposal(objid, sidechainWithdraw())) {
+        string strError = std::string("Error: withdrawid ")
+            + objid.ToString() + " already exists!";
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
+    // Check that wallet is unlocked
+    string strError;
+    if (pwalletMain->IsLocked()) {
+        strError = "Error: Wallet locked, unable to create transaction!";
+        LogPrintf("receivesidechainwt() (adding WT to index): %s", strError);
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError);
+    }
+
+    // Key to send the change to
+    CReserveKey reserveKey(pwalletMain);
+
+    // Fee to create the WT
+    CAmount nFeeRequired;
+
+    vector<CRecipient> vecSend;
+    CRecipient recipient = {withdraw.GetScript(), 1000000, false};
+    vecSend.push_back(recipient);
+
+    int nChangePos = -1;
+
+    CWalletTx wtx;
+    if (!pwalletMain->CreateTransaction(vecSend, wtx, reserveKey, nFeeRequired, nChangePos, strError))
+    {
+        if (nFeeRequired > pwalletMain->GetBalance())
+            strError = strprintf(
+                "Error: This transaction requires a transaction fee of at least %s!",
+                FormatMoney(nFeeRequired));
+        LogPrintf("receivesidechainwt() (adding WT to index): %s\n", strError);
+        throw JSONRPCError(RPC_WALLET_ERROR, strError);
+    }
+    if (!pwalletMain->CommitTransaction(wtx, reserveKey))
+        throw JSONRPCError(RPC_WALLET_ERROR,
+            "Error: Transaction to add WT to sidechain index was rejected!");
+
     UniValue ret(UniValue::VOBJ);
     ret.push_back(Pair("withdrawid", withdraw.GetHash().GetHex()));
     return ret;
 }
-
 
 UniValue getblockchaininfo(const UniValue& params, bool fHelp)
 {

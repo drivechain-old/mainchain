@@ -2,12 +2,13 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include <vector>
-#include <sstream>
-#include "hash.h"
-#include "clientversion.h"
 #include "primitives/sidechain.h"
+
+#include "clientversion.h"
+#include "hash.h"
 #include "streams.h"
+
+#include <sstream>
 
 const uint32_t nType = 1;
 const uint32_t nVersion = 1;
@@ -79,6 +80,29 @@ sidechainObj *sidechainObjCtr(const CScript &script)
     return NULL;
 }
 
+// TODO remove function (use casting & sidechainObjCreator)
+sidechainWithdraw *GetWT(const CScript &script)
+{
+    CScript::const_iterator pc = script.begin();
+    vector<unsigned char> vch;
+    opcodetype opcode;
+
+    if (!script.GetOp(pc, opcode, vch))
+        return NULL;
+    if (vch.size() == 0)
+        return NULL;
+    const char *vch0 = (const char *) &vch.begin()[0];
+    CDataStream ds(vch0, vch0+vch.size(), SER_DISK, CLIENT_VERSION);
+
+    if (*vch0 == 'W') {
+        sidechainWithdraw *obj = new sidechainWithdraw;
+        obj->Unserialize(ds, nType, nVersion);
+        return obj;
+    }
+
+    return NULL;
+}
+
 string sidechainObj::ToString(void) const
 {
     stringstream str;
@@ -97,6 +121,7 @@ string sidechainSidechain::ToString() const
     str << "waitPeriod=" << waitPeriod << endl;
     str << "verificationPeriod=" << verificationPeriod << endl;
     str << "minWorkScore=" << minWorkScore << endl;
+    str << "depositPubKey=" << HexStr(depositPubKey) << endl;
     return str.str();
 }
 

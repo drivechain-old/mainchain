@@ -1834,8 +1834,63 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
 }
 }// namespace Consensus
 
+bool CheckVerifications(sidechainWithdraw *wt)
+{
+    // TODO Improve this proof of concept
+
+    // Check WT^ pointer
+    if (!wt)
+        return false;
+
+    // Are there verifications?
+    vector<sidechainVerify> verifications = psidechaintree->GetVerifications(wt->GetHash());
+    if (!verifications.size())
+        return false;
+
+    // Lookup the sidechain that created the WT^
+    sidechainSidechain sidechain;
+    if (!psidechaintree->GetSidechain(wt->sidechainid, sidechain))
+        return false;
+
+    uint32_t workScore = 0;
+
+    // Find out the height of the current most-worked-on chain
+    const CBlockIndex* pindex = chainActive.Tip();
+    const int nHeight = pindex->nHeight;
+
+    // Go through verifications for this WT^
+    for (size_t i = 0; i < verifications.size(); i++) {
+        if (verifications[i].workScore > workScore)
+            workScore = verifications[i].workScore;
+    }
+
+    // TODO time period / order check
+
+    // Check work score
+    if (workScore >= sidechain.minWorkScore)
+        return true;
+
+    return false;
+}
+
 bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, bool cacheStore, std::vector<CScriptCheck> *pvChecks)
 {
+    // Check inputs that want to spend from sidechain WT^
+    BOOST_FOREACH(const CTxOut& txout, tx.vout) {
+        // TODO Improve this proof of concept
+        const CScript& scriptPubKey = txout.scriptPubKey;
+        size_t script_sz = scriptPubKey.size();
+        if ((script_sz < 2) || (scriptPubKey[script_sz - 1] != OP_SIDECHAIN))
+            continue;
+
+        sidechainWithdraw *wt = GetWT(scriptPubKey);
+        if (!wt)
+            continue;
+
+        if (!CheckVerifications(wt))
+            continue;
+    }
+
     if (!tx.IsCoinBase())
     {
         if (!Consensus::CheckTxInputs(tx, state, inputs, GetSpendHeight(inputs)))
@@ -3926,7 +3981,7 @@ bool CVerifyDB::VerifyDB(const CChainParams& chainparams, CCoinsView *coinsview,
             return error("VerifyDB(): *** ReadBlockFromDisk failed at %d, hash=%s", pindex->nHeight, pindex->GetBlockHash().ToString());
         // check level 1: verify block validity
         if (nCheckLevel >= 1 && !CheckBlock(block, state))
-            return error("%s: *** found bad block at %d, hash=%s (%s)\n", __func__, 
+            return error("%s: *** found bad block at %d, hash=%s (%s)\n", __func__,
                          pindex->nHeight, pindex->GetBlockHash().ToString(), FormatStateMessage(state));
         // check level 2: verify undo validity
         if (nCheckLevel >= 2 && pindex) {
@@ -4017,7 +4072,7 @@ bool LoadBlockIndex()
     return true;
 }
 
-bool InitBlockIndex(const CChainParams& chainparams) 
+bool InitBlockIndex(const CChainParams& chainparams)
 {
     LOCK(cs_main);
 

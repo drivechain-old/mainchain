@@ -5,14 +5,30 @@
 #ifndef BITCOIN_PRIMITIVES_SIDECHAIN_H
 #define BITCOIN_PRIMITIVES_SIDECHAIN_H
 
-#include <limits.h>
-#include <string>
-#include <vector>
+#include "primitives/transaction.h"
 #include "script/script.h"
 #include "serialize.h"
 #include "uint256.h"
+#include "utilstrencodings.h"
+
+#include <limits.h>
+#include <string>
+#include <vector>
 
 using namespace std;
+
+// TODO miner checks list before accepting createSidechain TX
+/**
+ * List of sidechains considered valid
+ */
+const uint256 sidechains[] = {
+    // Test Sidechain
+    uint256S("0x0aaaff52e6459150950173750de9493eb1157cd3ee270cd33519bed5a6d07e7a"),
+    // Test Sidechain 2
+    uint256S("0x8147bcc9e3268d2d42e851e73efcd872fbb3e0c649876419e86615681c7a580a")
+};
+
+const std::set<uint256> validSidechains(sidechains, sidechains + ARRAYLEN(sidechains));
 
 /**
  * Sidechain object for database
@@ -31,17 +47,13 @@ struct sidechainObj {
 };
 
 /**
- * Create sidechain object
- */
-sidechainObj *sidechainObjCtr(const CScript &);
-
-/**
  * Sidechain added to database
  */
 struct sidechainSidechain : public sidechainObj {
     uint16_t waitPeriod;
     uint16_t verificationPeriod;
     uint16_t minWorkScore;
+    CScript depositPubKey;
 
     sidechainSidechain(void) : sidechainObj() { sidechainop = 'S'; }
     virtual ~sidechainSidechain(void) { }
@@ -54,6 +66,7 @@ struct sidechainSidechain : public sidechainObj {
         READWRITE(waitPeriod);
         READWRITE(verificationPeriod);
         READWRITE(minWorkScore);
+        READWRITE(*(CScriptBase*)(&depositPubKey));
     }
 
     string ToString(void) const;
@@ -80,7 +93,7 @@ struct sidechainWithdraw : public sidechainObj {
     string ToString(void) const;
 };
 
-// TODO finish
+// TODO
 
 /**
  * Sidechain proposal verification (verified if verify = true, rejected otherwise)
@@ -106,5 +119,15 @@ struct sidechainVerify : public sidechainObj {
 
     string ToString(void) const;
 };
+
+/**
+ * Create sidechain object
+ */
+sidechainObj *sidechainObjCtr(const CScript &);
+
+/**
+ * Get sidechainWithdraw object
+ */
+sidechainWithdraw *GetWT(const CScript &script);
 
 #endif // BITCOIN_PRIMITIVES_SIDECHAIN_H

@@ -298,7 +298,7 @@ bool CSidechainTreeDB::ReadFlag(const string &name, bool &fValue)
     return true;
 }
 
-bool CSidechainTreeDB::GetSidechain(const uint256 &objid, sidechainSidechain sidechain) {
+bool CSidechainTreeDB::GetSidechain(const uint256 &objid, sidechainSidechain &sidechain) {
     if (Read(make_pair('S', objid), sidechain))
         return true;
 
