@@ -1,9 +1,10 @@
 #include "sidechaindepositdialog.h"
 #include "ui_sidechaindepositdialog.h"
 
-#include "txdb.h"
 #include "main.h"
 #include "primitives/sidechain.h"
+#include "primitives/transaction.h"
+#include "txdb.h"
 
 #include "wallet/wallet.h"
 
@@ -16,8 +17,8 @@ SidechainDepositDialog::SidechainDepositDialog(QWidget *parent) :
     ui->setupUi(this);
 
     // TODO it would be nice to show the user names instead of a hex...
-    BOOST_FOREACH(uint256 a, validSidechains) {
-        ui->comboBoxSidechains->addItem(QString::fromStdString(a.GetHex()));
+    BOOST_FOREACH(uint256 id, validSidechains) {
+        ui->comboBoxSidechains->addItem(QString::fromStdString(id.GetHex()));
     }
 }
 
@@ -58,14 +59,24 @@ void SidechainDepositDialog::on_pushButtonDeposit_clicked()
     CRecipient deposit = {sidechain.depositPubKey, ui->payAmount->value(), false};
     vecSend.push_back(deposit);
 
-    // 1: Sidechain hash (OP_RETURN)
+    // 1: Sidechain hash (OP_RETURN) & deposit address
+    std::string addr = ui->lineEditAddress->text().toStdString();
     std::string hashHex = sidechain.GetHash().GetHex();
 
     CScript dataScript;
-    dataScript << vector<unsigned char>(hashHex.begin(), hashHex.end()) << OP_RETURN;
+    dataScript << vector<unsigned char>(addr.begin(), addr.end());
+    dataScript << OP_0; // Separator
+    dataScript << vector<unsigned char>(hashHex.begin(), hashHex.end());
+    dataScript << OP_RETURN;
 
-    CRecipient data = {dataScript, 1000000, false};
-    vecSend.push_back(data);
+    // Calculate the minimum output to be relayed by the network
+    CRecipient dataCalc = {dataScript, 0, false};
+    CTxOut txoutCalc(dataCalc.nAmount, dataCalc.scriptPubKey);
+    size_t nSize = txoutCalc.GetSerializeSize(SER_DISK, 0)+148u;
+    CAmount minOutput = 3*::minRelayTxFee.GetFee(nSize);
+
+    CRecipient dataFinal = {dataScript, minOutput, false};
+    vecSend.push_back(dataFinal);
 
     int nChangePos = -1;
 
