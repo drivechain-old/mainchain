@@ -128,8 +128,8 @@ public:
     bool ReadFlag(const std::string &name, bool &fValue);
 
     bool GetSidechain(const uint256 & /* Sidechain ID */, sidechainSidechain &sidechain);
-    bool GetWithdrawProposal(const uint256 & /* WT^ ID */, sidechainWithdraw withdraw);
-    bool GetVerification(const uint256 & /* Verification ID */, sidechainVerify verification);
+    bool GetWithdrawProposal(const uint256 & /* WT^ ID */, sidechainWithdraw &withdraw);
+    bool GetVerification(const uint256 & /* Verification ID */, sidechainVerify &verification);
 
     vector<sidechainSidechain> GetSidechains(void);
     vector<sidechainWithdraw> GetWithdrawProposals(const uint256 & /* Sidechain ID */);

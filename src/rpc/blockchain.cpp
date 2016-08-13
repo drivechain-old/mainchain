@@ -1032,7 +1032,8 @@ UniValue receivesidechainwt(const UniValue& params, bool fHelp)
 
     // Check if duplicate WT
     uint256 objid = withdraw.GetHash();
-    if (psidechaintree->GetWithdrawProposal(objid, sidechainWithdraw())) {
+    sidechainWithdraw duplicate;
+    if (psidechaintree->GetWithdrawProposal(objid, duplicate)) {
         string strError = std::string("Error: withdrawid ")
             + objid.ToString() + " already exists!";
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
