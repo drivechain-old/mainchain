@@ -1020,14 +1020,13 @@ UniValue receivesidechainwt(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
     }
 
-    // Grab the WT from the sidechain
+    // Grab the WT ID from the sidechain (sidechain makes rpc request)
     std::string strHash = params[0].get_str();
     uint256 hash(uint256S(strHash));
 
     sidechainWithdraw withdraw;
     withdraw.proposaltxid = hash;
 
-    // Add the WT to the sidechain index
     EnsureWalletIsUnlocked();
 
     // Check if duplicate WT
@@ -1059,6 +1058,7 @@ UniValue receivesidechainwt(const UniValue& params, bool fHelp)
 
     int nChangePos = -1;
 
+    // Add the WT to the index
     CWalletTx wtx;
     if (!pwalletMain->CreateTransaction(vecSend, wtx, reserveKey, nFeeRequired, nChangePos, strError))
     {
@@ -1076,6 +1076,28 @@ UniValue receivesidechainwt(const UniValue& params, bool fHelp)
     UniValue ret(UniValue::VOBJ);
     ret.push_back(Pair("withdrawid", withdraw.GetHash().GetHex()));
     return ret;
+}
+
+UniValue requestdrivechaindeposits(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "requestdrivechaindeposits\n"
+            "Called by drivechain clients to request drivechain deposits\n"
+            "\nArguments:\n"
+            "1. \"height\"    (int, required) height filter for deposits\n"
+            "\nExamples:\n"
+            + HelpExampleCli("requestdrivechaindeposits", "\"height\"")
+            + HelpExampleRpc("requestdrivechaindeposits", "\"height\"")
+        );
+
+    if (!psidechaintree) {
+        string strError = std::string("Error: NULL psidechaintree!");
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
+    // Grab the height from the sidechain (sidechain makes rpc request)
+    uint32_t height = params[0].get_int();
 }
 
 UniValue getblockchaininfo(const UniValue& params, bool fHelp)
@@ -1399,6 +1421,7 @@ static const CRPCCommand commands[] =
     { "blockchain",         "listsidechainverifications", &listsidechainverifications, true  },
 
     { "blockchain",         "receivesidechainwt",         &receivesidechainwt,         true  },
+    { "blockchain",         "requestdrivechaindeposits",  &requestdrivechaindeposits,  true  },
 
     { "blockchain",         "getblockchaininfo",          &getblockchaininfo,          true  },
     { "blockchain",         "getbestblockhash",           &getbestblockhash,           true  },
