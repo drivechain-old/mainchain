@@ -93,6 +93,29 @@ struct sidechainWithdraw : public sidechainObj {
     string ToString(void) const;
 };
 
+/**
+ * Sidechain deposit added to database
+ */
+struct sidechainDeposit : public sidechainObj {
+    uint256 sidechainid;
+    uint256 deposittxid;
+    CScript depositScript;
+
+    sidechainDeposit(void) : sidechainObj() { sidechainop = 'D'; }
+    virtual ~sidechainDeposit(void) { }
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+        READWRITE(sidechainop);
+        READWRITE(deposittxid);
+        READWRITE(*(CScriptBase*) &depositScript);
+    }
+
+    string ToString(void) const;
+};
+
 // TODO
 
 /**
