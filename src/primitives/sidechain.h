@@ -6,6 +6,7 @@
 #define BITCOIN_PRIMITIVES_SIDECHAIN_H
 
 #include "primitives/transaction.h"
+#include "pubkey.h"
 #include "script/script.h"
 #include "serialize.h"
 #include "uint256.h"
@@ -97,9 +98,9 @@ struct sidechainWithdraw : public sidechainObj {
  * Sidechain deposit added to database
  */
 struct sidechainDeposit : public sidechainObj {
-    uint256 sidechainid;
     uint256 deposittxid;
-    CScript depositScript;
+    uint256 sidechainid;
+    CKeyID keyID;
 
     sidechainDeposit(void) : sidechainObj() { sidechainop = 'D'; }
     virtual ~sidechainDeposit(void) { }
@@ -110,7 +111,8 @@ struct sidechainDeposit : public sidechainObj {
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(sidechainop);
         READWRITE(deposittxid);
-        READWRITE(*(CScriptBase*) &depositScript);
+        READWRITE(sidechainid);
+        READWRITE(keyID);
     }
 
     string ToString(void) const;

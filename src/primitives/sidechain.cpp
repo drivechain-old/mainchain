@@ -154,6 +154,8 @@ string sidechainDeposit::ToString() const
     str << "nHeight=" << nHeight << endl;
     str << "txid=" << txid.GetHex() << endl;
     str << "deposittxid=" << deposittxid.GetHex() << endl;
+    str << "sidechainid=" << sidechainid.GetHex() << endl;
+    str << "keyID=" << keyID.GetHex() << endl;
     return str.str();
 }
 
