@@ -312,6 +312,13 @@ bool CSidechainTreeDB::GetWithdrawProposal(const uint256 &objid, sidechainWithdr
     return false;
 }
 
+bool CSidechainTreeDB::GetDeposit(const uint256 &objid, sidechainDeposit &deposit) {
+    if (Read(make_pair('D', objid), deposit))
+        return true;
+
+    return false;
+}
+
 bool CSidechainTreeDB::GetVerification(const uint256 &objid, sidechainVerify &verify) {
     if (Read(make_pair('V', objid), verify))
         return true;
@@ -359,6 +366,27 @@ vector<sidechainWithdraw> CSidechainTreeDB::GetWithdrawProposals(const uint256 &
     }
 
     return vWithdraw;
+}
+
+vector<sidechainDeposit> CSidechainTreeDB::GetDeposits(const uint256 &objid) {
+    const char depositop = 'd';
+    ostringstream ss;
+    ::Serialize(ss, make_pair(make_pair(depositop, objid), uint256()), SER_DISK, CLIENT_VERSION);
+
+    vector<sidechainDeposit> vDeposit;
+    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
+    for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+        boost::this_thread::interruption_point();
+
+        std::pair<char, uint256> key;
+        sidechainDeposit deposit;
+        if (pcursor->GetKey(key) && key.first == depositop) {
+            if (pcursor->GetValue(deposit))
+                vDeposit.push_back(deposit);
+        }
+    }
+
+    return vDeposit;
 }
 
 vector<sidechainVerify> CSidechainTreeDB::GetVerifications(const uint256 &objid) {

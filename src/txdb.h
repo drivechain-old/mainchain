@@ -129,10 +129,12 @@ public:
 
     bool GetSidechain(const uint256 & /* Sidechain ID */, sidechainSidechain &sidechain);
     bool GetWithdrawProposal(const uint256 & /* WT^ ID */, sidechainWithdraw &withdraw);
+    bool GetDeposit(const uint256 & /* Deposit ID */, sidechainDeposit &deposit);
     bool GetVerification(const uint256 & /* Verification ID */, sidechainVerify &verification);
 
     vector<sidechainSidechain> GetSidechains(void);
     vector<sidechainWithdraw> GetWithdrawProposals(const uint256 & /* Sidechain ID */);
+    vector<sidechainDeposit> GetDeposits(const uint256 & /* Sidechain ID */);
     vector<sidechainVerify> GetVerifications(const uint256 & /* WT^ ID */);
 };
 
