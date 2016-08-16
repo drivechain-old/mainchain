@@ -134,7 +134,7 @@ public:
 
     vector<sidechainSidechain> GetSidechains(void);
     vector<sidechainWithdraw> GetWithdrawProposals(const uint256 & /* Sidechain ID */);
-    vector<sidechainDeposit> GetDeposits(const uint256 & /* Sidechain ID */);
+    vector<sidechainDeposit> GetDeposits(const uint256 & /* Sidechain ID */, uint32_t height = 0);
     vector<sidechainVerify> GetVerifications(const uint256 & /* WT^ ID */);
 };
 

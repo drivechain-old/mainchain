@@ -1020,10 +1020,13 @@ UniValue listsidechaindeposits(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
     }
 
+    // TODO take from params
+    uint32_t height = 0;
+
     uint256 id;
     id.SetHex(params[0].get_str());
 
-    vector<sidechainDeposit> vec = psidechaintree->GetDeposits(id);
+    vector<sidechainDeposit> vec = psidechaintree->GetDeposits(id, height);
 
     UniValue res(UniValue::VARR);
 
@@ -1087,6 +1090,7 @@ UniValue listsidechainverifications(const UniValue& params, bool fHelp)
 
 UniValue receivesidechainwt(const UniValue& params, bool fHelp)
 {
+    // Note: the sidechain makes this RPC request automatically
     if (fHelp || params.size() != 1)
         throw runtime_error(
             "receivesidechainwt\n"
@@ -1163,15 +1167,17 @@ UniValue receivesidechainwt(const UniValue& params, bool fHelp)
 
 UniValue requestdrivechaindeposits(const UniValue& params, bool fHelp)
 {
-    if (fHelp || params.size() != 1)
+    // Note: the sidechain makes this RPC request automatically
+    if (fHelp || params.size() != 2)
         throw runtime_error(
             "requestdrivechaindeposits\n"
             "Called by drivechain clients to request drivechain deposits\n"
             "\nArguments:\n"
-            "1. \"height\"    (int, required) height filter for deposits\n"
+            "1. \"sidechainid\"   (string, required) The sidechain id\n"
+            "2. \"height\"        (int, required) height filter for deposits\n"
             "\nExamples:\n"
-            + HelpExampleCli("requestdrivechaindeposits", "\"height\"")
-            + HelpExampleRpc("requestdrivechaindeposits", "\"height\"")
+            + HelpExampleCli("requestdrivechaindeposits", "\"height\"\"sidechainid\"")
+            + HelpExampleRpc("requestdrivechaindeposits", "\"height\"\"sidechainid\"")
         );
 
     if (!psidechaintree) {
@@ -1179,8 +1185,30 @@ UniValue requestdrivechaindeposits(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
     }
 
-    // Grab the height from the sidechain (sidechain makes rpc request)
-    uint32_t height = params[0].get_int();
+    // Grab the sidechain id & height
+    uint256 sidechainid;
+    sidechainid.SetHex(params[0].get_str());
+    uint32_t height = params[1].get_int();
+
+    vector<sidechainDeposit> vDeposit = psidechaintree->GetDeposits(sidechainid, height);
+
+    UniValue res(UniValue::VARR);
+
+    for (size_t i = 0; i < vDeposit.size(); i++) {
+        const sidechainDeposit deposit = vDeposit[i];
+
+        UniValue obj(UniValue::VOBJ);
+        obj.push_back(Pair("depositid", deposit.GetHash().GetHex()));
+        obj.push_back(Pair("txid", deposit.txid.ToString()));
+        obj.push_back(Pair("nHeight", (int)deposit.nHeight));
+        obj.push_back(Pair("deposittxid", deposit.deposittxid.ToString()));
+        obj.push_back(Pair("sidechainid", deposit.sidechainid.ToString()));
+        obj.push_back(Pair("keyID", deposit.keyID.ToString()));
+
+        res.push_back(obj);
+    }
+
+    return res;
 }
 
 UniValue getblockchaininfo(const UniValue& params, bool fHelp)

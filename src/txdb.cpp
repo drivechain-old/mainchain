@@ -375,7 +375,8 @@ vector<sidechainWithdraw> CSidechainTreeDB::GetWithdrawProposals(const uint256 &
     return vWithdraw;
 }
 
-vector<sidechainDeposit> CSidechainTreeDB::GetDeposits(const uint256 &objid) {
+vector<sidechainDeposit> CSidechainTreeDB::GetDeposits(const uint256 &objid, uint32_t height) {
+    // TODO filter by height
     const char depositop = 'd';
     ostringstream ss;
     ::Serialize(ss, make_pair(make_pair(depositop, objid), uint256()), SER_DISK, CLIENT_VERSION);
