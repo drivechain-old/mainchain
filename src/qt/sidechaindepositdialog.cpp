@@ -1,6 +1,7 @@
 #include "sidechaindepositdialog.h"
 #include "ui_sidechaindepositdialog.h"
 
+#include "base58.h"
 #include "main.h"
 #include "primitives/sidechain.h"
 #include "primitives/transaction.h"
@@ -53,39 +54,34 @@ void SidechainDepositDialog::on_pushButtonDeposit_clicked()
     CAmount nFeeRequired;
 
     // Deposit TX outputs:
-    vector<CRecipient> vecSend;
+    vector<CRecipient> vRecipient;
 
     // 0: Payment to sidechain deposit script
-    CRecipient deposit = {sidechain.depositPubKey, ui->payAmount->value(), false};
-    vecSend.push_back(deposit);
+    CRecipient payment = {sidechain.depositPubKey, ui->payAmount->value(), false};
+    vRecipient.push_back(payment);
 
-    // 1: Sidechain hash (OP_RETURN) & deposit address
-    std::string addr = ui->lineEditAddress->text().toStdString();
-    std::string hashHex = sidechain.GetHash().GetHex();
-
-    CScript dataScript;
-    dataScript << vector<unsigned char>(addr.begin(), addr.end());
-    dataScript << OP_0; // Separator
-    dataScript << vector<unsigned char>(hashHex.begin(), hashHex.end());
-    dataScript << OP_RETURN;
+    // 1: Deposit data (address, sidechainid)
+    sidechainDeposit deposit;
+    deposit.sidechainid = sidechain.GetHash();
+    CBitcoinAddress depAddr = CBitcoinAddress(ui->lineEditAddress->text().toStdString());
+    depAddr.GetKeyID(deposit.keyID);
 
     // Calculate the minimum output to be relayed by the network
-    CRecipient dataCalc = {dataScript, 0, false};
-    CTxOut txoutCalc(dataCalc.nAmount, dataCalc.scriptPubKey);
+    CRecipient calc = {deposit.GetScript(), 0, false};
+    CTxOut txoutCalc(calc.nAmount, calc.scriptPubKey);
     size_t nSize = txoutCalc.GetSerializeSize(SER_DISK, 0)+148u;
     CAmount minOutput = 3*::minRelayTxFee.GetFee(nSize);
 
-    CRecipient dataFinal = {dataScript, minOutput, false};
-    vecSend.push_back(dataFinal);
-
-    int nChangePos = -1;
+    CRecipient depositInfo = {deposit.GetScript(), minOutput, false};
+    vRecipient.push_back(depositInfo);
 
     // Create a transaction with the above outputs
+    int nChangePos = -1;
     CWalletTx wtx;
     std::string strError;
-    if (!pwalletMain->CreateTransaction(vecSend, wtx, reserveKey, nFeeRequired, nChangePos, strError))
+    if (!pwalletMain->CreateTransaction(vRecipient, wtx, reserveKey, nFeeRequired, nChangePos, strError))
     {
-        // TODO
+        // TODO make pretty
         QDialog error;
         error.setWindowTitle(QString::fromStdString(strError));
         error.exec();

@@ -23,8 +23,8 @@ using namespace std;
  * List of sidechains considered valid
  */
 const uint256 sidechains[] = {
-    // Test Sidechain
-    uint256S("0x0aaaff52e6459150950173750de9493eb1157cd3ee270cd33519bed5a6d07e7a"),
+    // Test Sidechain (200, 200, 200)
+    uint256S("0xca85db47c45dfccfa9f5562f7383c7b3fe1746017327371771ed3f70345b72d4"),
     // Test Sidechain 2
     uint256S("0x8147bcc9e3268d2d42e851e73efcd872fbb3e0c649876419e86615681c7a580a")
 };
