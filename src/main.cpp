@@ -1894,7 +1894,7 @@ bool CheckVerifications(sidechainWithdraw *wt)
     }
 
     // Final vote should be equal to sidechain minWorkScore
-    if (!vCleanVers[ARRAYLEN(vCleanVers)].workScore == sidechain.minWorkScore)
+    if (!(vCleanVers[ARRAYLEN(vCleanVers)].workScore == sidechain.minWorkScore))
         return false;
 
     return true;
