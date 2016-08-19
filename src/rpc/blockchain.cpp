@@ -1176,8 +1176,8 @@ UniValue requestdrivechaindeposits(const UniValue& params, bool fHelp)
             "1. \"sidechainid\"   (string, required) The sidechain id\n"
             "2. \"height\"        (int, required) height filter for deposits\n"
             "\nExamples:\n"
-            + HelpExampleCli("requestdrivechaindeposits", "\"height\"\"sidechainid\"")
-            + HelpExampleRpc("requestdrivechaindeposits", "\"height\"\"sidechainid\"")
+            + HelpExampleCli("requestdrivechaindeposits", "\"sidechainid\"\"height\"")
+            + HelpExampleRpc("requestdrivechaindeposits", "\"sidechainid\"\"height\"")
         );
 
     if (!psidechaintree) {
@@ -1187,12 +1187,13 @@ UniValue requestdrivechaindeposits(const UniValue& params, bool fHelp)
 
     // Grab the sidechain id & height
     uint256 sidechainid;
-    sidechainid.SetHex(params[0].get_str());
+    std::string strHash = params[0].get_str();
+    sidechainid = uint256S(strHash);
     uint32_t height = params[1].get_int();
 
     vector<sidechainDeposit> vDeposit = psidechaintree->GetDeposits(sidechainid, height);
 
-    UniValue res(UniValue::VARR);
+    UniValue ret(UniValue::VOBJ);
 
     for (size_t i = 0; i < vDeposit.size(); i++) {
         const sidechainDeposit deposit = vDeposit[i];
@@ -1205,10 +1206,10 @@ UniValue requestdrivechaindeposits(const UniValue& params, bool fHelp)
         obj.push_back(Pair("sidechainid", deposit.sidechainid.ToString()));
         obj.push_back(Pair("keyID", deposit.keyID.ToString()));
 
-        res.push_back(obj);
+        ret.push_back(Pair("deposit", obj));
     }
 
-    return res;
+    return ret;
 }
 
 UniValue getblockchaininfo(const UniValue& params, bool fHelp)
