@@ -22,6 +22,9 @@ uint256 sidechainObj::GetHash(void) const
     if (sidechainop == 'W')
         ret = SerializeHash(*(sidechainWithdraw *) this);
     else
+    if (sidechainop == 'D')
+        ret = SerializeHash(*(sidechainDeposit *) this);
+    else
     if (sidechainop == 'V')
         ret = SerializeHash(*(sidechainVerify *) this);
 
@@ -37,6 +40,9 @@ CScript sidechainObj::GetScript(void) const
     else
     if (sidechainop == 'W')
         ((sidechainWithdraw *) this)->Serialize(ds, nType, nVersion);
+    else
+    if (sidechainop == 'D')
+        ((sidechainDeposit *) this)->Serialize(ds, nType, nVersion);
     else
     if (sidechainop == 'V')
         ((sidechainVerify *) this)->Serialize(ds, nType, nVersion);
@@ -67,6 +73,12 @@ sidechainObj *sidechainObjCtr(const CScript &script)
     else
     if (*vch0 == 'W') {
         sidechainWithdraw *obj = new sidechainWithdraw;
+        obj->Unserialize(ds, nType, nVersion);
+        return obj;
+    }
+    else
+    if (*vch0 == 'D') {
+        sidechainDeposit *obj = new sidechainDeposit;
         obj->Unserialize(ds, nType, nVersion);
         return obj;
     }
@@ -131,7 +143,19 @@ string sidechainWithdraw::ToString() const
     str << "sidechainop=" << sidechainop << endl;
     str << "nHeight=" << nHeight << endl;
     str << "txid=" << txid.GetHex() << endl;
-    str << "proposaltxid=" << txid.GetHex() << endl;
+    str << "proposaltxid=" << proposaltxid.GetHex() << endl;
+    return str.str();
+}
+
+string sidechainDeposit::ToString() const
+{
+    stringstream str;
+    str << "sidechainop=" << sidechainop << endl;
+    str << "nHeight=" << nHeight << endl;
+    str << "txid=" << txid.GetHex() << endl;
+    str << "deposittxid=" << deposittxid.GetHex() << endl;
+    str << "sidechainid=" << sidechainid.GetHex() << endl;
+    str << "keyID=" << keyID.GetHex() << endl;
     return str.str();
 }
 
@@ -142,6 +166,5 @@ string sidechainVerify::ToString() const
     str << "nHeight=" << nHeight << endl;
     str << "wtxid=" << wtxid.GetHex() << endl;
     str << "workScore=" << workScore << endl;
-
     return str.str();
 }

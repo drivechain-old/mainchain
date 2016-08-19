@@ -6,6 +6,7 @@
 #define BITCOIN_PRIMITIVES_SIDECHAIN_H
 
 #include "primitives/transaction.h"
+#include "pubkey.h"
 #include "script/script.h"
 #include "serialize.h"
 #include "uint256.h"
@@ -22,8 +23,8 @@ using namespace std;
  * List of sidechains considered valid
  */
 const uint256 sidechains[] = {
-    // Test Sidechain
-    uint256S("0x0aaaff52e6459150950173750de9493eb1157cd3ee270cd33519bed5a6d07e7a"),
+    // Test Sidechain (200, 200, 200)
+    uint256S("0xca85db47c45dfccfa9f5562f7383c7b3fe1746017327371771ed3f70345b72d4"),
     // Test Sidechain 2
     uint256S("0x8147bcc9e3268d2d42e851e73efcd872fbb3e0c649876419e86615681c7a580a")
 };
@@ -88,6 +89,30 @@ struct sidechainWithdraw : public sidechainObj {
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(sidechainop);
         READWRITE(proposaltxid);
+    }
+
+    string ToString(void) const;
+};
+
+/**
+ * Sidechain deposit added to database
+ */
+struct sidechainDeposit : public sidechainObj {
+    uint256 deposittxid;
+    uint256 sidechainid;
+    CKeyID keyID;
+
+    sidechainDeposit(void) : sidechainObj() { sidechainop = 'D'; }
+    virtual ~sidechainDeposit(void) { }
+
+    ADD_SERIALIZE_METHODS
+
+    template <typename Stream, typename Operation>
+    inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
+        READWRITE(sidechainop);
+        READWRITE(deposittxid);
+        READWRITE(sidechainid);
+        READWRITE(keyID);
     }
 
     string ToString(void) const;

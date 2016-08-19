@@ -105,6 +105,7 @@ static const CRPCConvertParam vRPCConvertParams[] =
     { "createsidechain", 0},
     { "createsidechain", 1},
     { "createsidechain", 2},
+    { "requestdrivechaindeposits", 1},
 };
 
 class CRPCConvertTable

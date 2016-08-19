@@ -860,6 +860,46 @@ UniValue getsidechainwithdraw(const UniValue& params, bool fHelp)
     return ret;
 }
 
+UniValue getsidechaindeposit(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "getsidechaindeposit \"depositid\"\n "
+            "Returns an object containing information about the deposit.\n"
+            "\nResult:\n"
+            "{\n"
+            "}\n"
+            "\nExamples:\n"
+            + HelpExampleCli("getsidechaindeposit", "")
+            + HelpExampleRpc("getsidechaindeposit", "")
+        );
+
+    if (!psidechaintree) {
+        string strError = std::string("Error: NULL psidechaintree!");
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
+    uint256 id;
+    id.SetHex(params[0].get_str());
+
+    sidechainDeposit deposit;
+
+    if (!psidechaintree->GetDeposit(id, deposit)) {
+        string strError = std::string("Error: depositid ")
+                + id.ToString() + " not found!";
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
+    UniValue ret(UniValue::VOBJ);
+    ret.push_back(Pair("depositid", id.ToString()));
+    ret.push_back(Pair("txid", deposit.txid.ToString()));
+    ret.push_back(Pair("nHeight", (int)deposit.nHeight));
+    ret.push_back(Pair("deposittxid", deposit.deposittxid.ToString()));
+    ret.push_back(Pair("sidechainid", deposit.sidechainid.ToString()));
+    ret.push_back(Pair("keyID", deposit.keyID.ToString()));
+    return ret;
+}
+
 UniValue getsidechainverification(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
@@ -961,6 +1001,52 @@ UniValue listsidechainwithdraws(const UniValue& params, bool fHelp)
     return res;
 }
 
+UniValue listsidechaindeposits(const UniValue& params, bool fHelp)
+{
+    if (fHelp || params.size() != 1)
+        throw runtime_error(
+            "listsidechaindeposits \"sidechainid\"\n "
+            "Returns list of sidechain deposits.\n"
+            "\nResult:\n"
+            "{\n"
+            "}\n"
+            "\nExamples:\n"
+            + HelpExampleCli("listsidechaindeposits", "")
+            + HelpExampleRpc("listsidechaindeposits", "")
+        );
+
+    if (!psidechaintree) {
+        string strError = std::string("Error: NULL psidechaintree!");
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
+    // TODO take from params
+    uint32_t height = 0;
+
+    uint256 id;
+    id.SetHex(params[0].get_str());
+
+    vector<sidechainDeposit> vec = psidechaintree->GetDeposits(id, height);
+
+    UniValue res(UniValue::VARR);
+
+    for (size_t i = 0; i < vec.size(); i++) {
+        const sidechainDeposit deposit = vec[i];
+
+        UniValue obj(UniValue::VOBJ);
+        obj.push_back(Pair("depositid", deposit.GetHash().GetHex()));
+        obj.push_back(Pair("txid", deposit.txid.ToString()));
+        obj.push_back(Pair("nHeight", (int)deposit.nHeight));
+        obj.push_back(Pair("deposittxid", deposit.deposittxid.ToString()));
+        obj.push_back(Pair("sidechainid", deposit.sidechainid.ToString()));
+        obj.push_back(Pair("keyID", deposit.keyID.ToString()));
+
+        res.push_back(obj);
+    }
+
+    return res;
+}
+
 UniValue listsidechainverifications(const UniValue& params, bool fHelp)
 {
     if (fHelp || params.size() != 1)
@@ -1004,6 +1090,7 @@ UniValue listsidechainverifications(const UniValue& params, bool fHelp)
 
 UniValue receivesidechainwt(const UniValue& params, bool fHelp)
 {
+    // Note: the sidechain makes this RPC request automatically
     if (fHelp || params.size() != 1)
         throw runtime_error(
             "receivesidechainwt\n"
@@ -1020,14 +1107,13 @@ UniValue receivesidechainwt(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
     }
 
-    // Grab the WT from the sidechain
+    // Grab the WT ID from the sidechain (sidechain makes rpc request)
     std::string strHash = params[0].get_str();
     uint256 hash(uint256S(strHash));
 
     sidechainWithdraw withdraw;
     withdraw.proposaltxid = hash;
 
-    // Add the WT to the sidechain index
     EnsureWalletIsUnlocked();
 
     // Check if duplicate WT
@@ -1059,6 +1145,7 @@ UniValue receivesidechainwt(const UniValue& params, bool fHelp)
 
     int nChangePos = -1;
 
+    // Add the WT to the index
     CWalletTx wtx;
     if (!pwalletMain->CreateTransaction(vecSend, wtx, reserveKey, nFeeRequired, nChangePos, strError))
     {
@@ -1075,6 +1162,53 @@ UniValue receivesidechainwt(const UniValue& params, bool fHelp)
 
     UniValue ret(UniValue::VOBJ);
     ret.push_back(Pair("withdrawid", withdraw.GetHash().GetHex()));
+    return ret;
+}
+
+UniValue requestdrivechaindeposits(const UniValue& params, bool fHelp)
+{
+    // Note: the sidechain makes this RPC request automatically
+    if (fHelp || params.size() != 2)
+        throw runtime_error(
+            "requestdrivechaindeposits\n"
+            "Called by drivechain clients to request drivechain deposits\n"
+            "\nArguments:\n"
+            "1. \"sidechainid\"   (string, required) The sidechain id\n"
+            "2. \"height\"        (int, required) height filter for deposits\n"
+            "\nExamples:\n"
+            + HelpExampleCli("requestdrivechaindeposits", "\"sidechainid\"\"height\"")
+            + HelpExampleRpc("requestdrivechaindeposits", "\"sidechainid\"\"height\"")
+        );
+
+    if (!psidechaintree) {
+        string strError = std::string("Error: NULL psidechaintree!");
+        throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
+    }
+
+    // Grab the sidechain id & height
+    uint256 sidechainid;
+    std::string strHash = params[0].get_str();
+    sidechainid = uint256S(strHash);
+    uint32_t height = params[1].get_int();
+
+    vector<sidechainDeposit> vDeposit = psidechaintree->GetDeposits(sidechainid, height);
+
+    UniValue ret(UniValue::VOBJ);
+
+    for (size_t i = 0; i < vDeposit.size(); i++) {
+        const sidechainDeposit deposit = vDeposit[i];
+
+        UniValue obj(UniValue::VOBJ);
+        obj.push_back(Pair("depositid", deposit.GetHash().GetHex()));
+        obj.push_back(Pair("txid", deposit.txid.ToString()));
+        obj.push_back(Pair("nHeight", (int)deposit.nHeight));
+        obj.push_back(Pair("deposittxid", deposit.deposittxid.ToString()));
+        obj.push_back(Pair("sidechainid", deposit.sidechainid.ToString()));
+        obj.push_back(Pair("keyID", deposit.keyID.ToString()));
+
+        ret.push_back(Pair("deposit", obj));
+    }
+
     return ret;
 }
 
@@ -1209,7 +1343,7 @@ UniValue getchaintips(const UniValue& params, bool fHelp)
     LOCK(cs_main);
 
     /*
-     * Idea:  the set of chain tips is chainActive.tip, plus orphan blocks which do not have another orphan building off of them. 
+     * Idea:  the set of chain tips is chainActive.tip, plus orphan blocks which do not have another orphan building off of them.
      * Algorithm:
      *  - Make one pass through mapBlockIndex, picking out the orphan blocks, and also storing a set of the orphan block's pprev pointers.
      *  - Iterate through the orphan blocks. If the block isn't pointed to by another orphan, it is a chain tip.
@@ -1393,12 +1527,15 @@ static const CRPCCommand commands[] =
 
     { "blockchain",         "getsidechain",               &getsidechain,               true  },
     { "blockchain",         "getsidechainwithdraw",       &getsidechainwithdraw,       true  },
+    { "blockchain",         "getsidechaindeposit",        &getsidechaindeposit,        true  },
     { "blockchain",         "getsidechainverification",   &getsidechainverification,   true  },
     { "blockchain",         "listsidechains",             &listsidechains,             true  },
     { "blockchain",         "listsidechainwithdraws",     &listsidechainwithdraws,     true  },
+    { "blockchain",         "listsidechaindeposits",      &listsidechaindeposits,      true  },
     { "blockchain",         "listsidechainverifications", &listsidechainverifications, true  },
 
     { "blockchain",         "receivesidechainwt",         &receivesidechainwt,         true  },
+    { "blockchain",         "requestdrivechaindeposits",  &requestdrivechaindeposits,  true  },
 
     { "blockchain",         "getblockchaininfo",          &getblockchaininfo,          true  },
     { "blockchain",         "getbestblockhash",           &getbestblockhash,           true  },

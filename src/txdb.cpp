@@ -273,6 +273,13 @@ bool CSidechainTreeDB::WriteSidechainIndex(const std::vector<std::pair<uint256, 
             batch.Write(make_pair(make_pair(make_pair('w', ptr->sidechainid), ptr->nHeight), objid), value);
         }
         else
+        if (obj->sidechainop == 'D') {
+            const sidechainDeposit *ptr = (const sidechainDeposit *) obj;
+            pair<sidechainDeposit, uint256> value = make_pair(*ptr, obj->txid);
+            batch.Write(key, value);
+            batch.Write(make_pair(make_pair(make_pair('d', ptr->sidechainid), ptr->nHeight), objid), value);
+        }
+        else
         if (obj->sidechainop == 'V') {
             const sidechainVerify *ptr = (const sidechainVerify *) obj;
             pair<sidechainVerify, uint256> value = make_pair(*ptr, obj->txid);
@@ -307,6 +314,13 @@ bool CSidechainTreeDB::GetSidechain(const uint256 &objid, sidechainSidechain &si
 
 bool CSidechainTreeDB::GetWithdrawProposal(const uint256 &objid, sidechainWithdraw &withdraw) {
     if (Read(make_pair('W', objid), withdraw))
+        return true;
+
+    return false;
+}
+
+bool CSidechainTreeDB::GetDeposit(const uint256 &objid, sidechainDeposit &deposit) {
+    if (Read(make_pair('D', objid), deposit))
         return true;
 
     return false;
@@ -359,6 +373,28 @@ vector<sidechainWithdraw> CSidechainTreeDB::GetWithdrawProposals(const uint256 &
     }
 
     return vWithdraw;
+}
+
+vector<sidechainDeposit> CSidechainTreeDB::GetDeposits(const uint256 &objid, uint32_t height) {
+    // TODO filter by height
+    const char depositop = 'd';
+    ostringstream ss;
+    ::Serialize(ss, make_pair(make_pair(depositop, objid), uint256()), SER_DISK, CLIENT_VERSION);
+
+    vector<sidechainDeposit> vDeposit;
+    boost::scoped_ptr<CDBIterator> pcursor(NewIterator());
+    for (pcursor->Seek(ss.str()); pcursor->Valid(); pcursor->Next()) {
+        boost::this_thread::interruption_point();
+
+        std::pair<char, uint256> key;
+        sidechainDeposit deposit;
+        if (pcursor->GetKey(key) && key.first == depositop) {
+            if (pcursor->GetValue(deposit))
+                vDeposit.push_back(deposit);
+        }
+    }
+
+    return vDeposit;
 }
 
 vector<sidechainVerify> CSidechainTreeDB::GetVerifications(const uint256 &objid) {
