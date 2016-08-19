@@ -1842,35 +1842,62 @@ bool CheckVerifications(sidechainWithdraw *wt)
     if (!wt)
         return false;
 
-    // Are there verifications?
-    vector<sidechainVerify> verifications = psidechaintree->GetVerifications(wt->GetHash());
-    if (!verifications.size())
-        return false;
-
     // Lookup the sidechain that created the WT^
     sidechainSidechain sidechain;
     if (!psidechaintree->GetSidechain(wt->sidechainid, sidechain))
         return false;
 
-    uint32_t workScore = 0;
+    // Are there verifications?
+    vector<sidechainVerify> vDirtyVers = psidechaintree->GetVerifications(wt->GetHash());
+    if (!vDirtyVers.size())
+        return false;
 
     // Find out the height of the current most-worked-on chain
     const CBlockIndex* pindex = chainActive.Tip();
     const int nHeight = pindex->nHeight;
 
-    // Go through verifications for this WT^
-    for (size_t i = 0; i < verifications.size(); i++) {
-        if (verifications[i].workScore > workScore)
-            workScore = verifications[i].workScore;
+    int minHeight = nHeight - sidechain.verificationPeriod;
+    int maxHeight = nHeight;
+
+    // Go through verifications (from this period) for this WT^
+    vector<sidechainVerify> vCleanVers;
+    for (size_t i = 0; i < vDirtyVers.size(); i++) {
+        // Filter out verifications with invalid height
+        if ((int)vDirtyVers[i].nHeight > maxHeight)
+            continue;
+
+        // Filter out verifications that are too old
+        if ((int)vDirtyVers[i].nHeight < minHeight)
+            continue;
+
+        vCleanVers.push_back(vDirtyVers[i]);
     }
 
-    // TODO time period / order check
+    // Sort the filtered verifications (ascending by nHeight)
+    std::sort(vCleanVers.begin(), vCleanVers.end(),
+        [](const sidechainVerify& x, const sidechainVerify& y){return x.nHeight < y.nHeight;});
 
-    // Check work score
-    if (workScore >= sidechain.minWorkScore)
-        return true;
+    if (!vCleanVers.size())
+        return false;
 
-    return false;
+    // First vote should be 1
+    if (vCleanVers[0].workScore != 1)
+        return false;
+
+    // Check sanity of workscore increment / decrement
+    uint32_t last = 0;
+    for (size_t i = 0; i < vCleanVers.size(); i++) {
+        // If the workscore is invalid, go to the next in the list
+        if (std::abs(vCleanVers[i].workScore - last) > 1)
+            continue;
+        last = vCleanVers[i].workScore;
+    }
+
+    // Final vote should be equal to sidechain minWorkScore
+    if (!vCleanVers[ARRAYLEN(vCleanVers)].workScore == sidechain.minWorkScore)
+        return false;
+
+    return true;
 }
 
 bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, bool cacheStore, std::vector<CScriptCheck> *pvChecks)

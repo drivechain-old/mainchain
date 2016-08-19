@@ -305,14 +305,14 @@ bool CSidechainTreeDB::GetSidechain(const uint256 &objid, sidechainSidechain &si
     return false;
 }
 
-bool CSidechainTreeDB::GetWithdrawProposal(const uint256 &objid, sidechainWithdraw withdraw) {
+bool CSidechainTreeDB::GetWithdrawProposal(const uint256 &objid, sidechainWithdraw &withdraw) {
     if (Read(make_pair('W', objid), withdraw))
         return true;
 
     return false;
 }
 
-bool CSidechainTreeDB::GetVerification(const uint256 &objid, sidechainVerify verify) {
+bool CSidechainTreeDB::GetVerification(const uint256 &objid, sidechainVerify &verify) {
     if (Read(make_pair('V', objid), verify))
         return true;
 

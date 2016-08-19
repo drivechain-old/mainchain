@@ -22,7 +22,7 @@
     </widget>
    </item>
    <item row="2" column="0">
-    <widget class="QLineEdit" name="lineEdit">
+    <widget class="QLineEdit" name="lineEditAddress">
      <property name="placeholderText">
       <string>Enter sidechain address</string>
      </property>
