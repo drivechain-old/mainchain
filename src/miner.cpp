@@ -111,6 +111,7 @@ CTransaction getSidechainTX(sidechainSidechain sidechain, uint32_t height)
             // Append WT^ to mtx
             if (checkWithdraw(withdraw, sidechain)) {
                 // TODO proper withdraw format
+
             }
         } else {
             // Update work score

@@ -19,6 +19,7 @@
 using namespace std;
 
 // TODO miner checks list before accepting createSidechain TX
+// TODO change valid sidechain list to pairs of (uint256 sidechainid, str name)
 /**
  * List of sidechains considered valid
  */
@@ -79,6 +80,7 @@ struct sidechainSidechain : public sidechainObj {
 struct sidechainWithdraw : public sidechainObj {
     uint256 sidechainid;
     uint256 proposaltxid;
+    CTransaction wt;
 
     sidechainWithdraw(void) : sidechainObj() { sidechainop = 'W'; }
     virtual ~sidechainWithdraw(void) { }
@@ -89,6 +91,7 @@ struct sidechainWithdraw : public sidechainObj {
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(sidechainop);
         READWRITE(proposaltxid);
+        READWRITE(wt);
     }
 
     string ToString(void) const;

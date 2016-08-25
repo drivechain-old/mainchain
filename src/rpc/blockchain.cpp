@@ -9,6 +9,7 @@
 #include "checkpoints.h"
 #include "coins.h"
 #include "consensus/validation.h"
+#include "core_io.h"
 #include "hash.h"
 #include "main.h"
 #include "policy/policy.h"
@@ -31,6 +32,9 @@
 #include <boost/thread/thread.hpp> // boost::thread::interrupt
 
 using namespace std;
+
+const uint32_t nType = 1;
+const uint32_t nVersion = 1;
 
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry);
 void ScriptPubKeyToJSON(const CScript& scriptPubKey, UniValue& out, bool fIncludeHex);
@@ -1091,15 +1095,17 @@ UniValue listsidechainverifications(const UniValue& params, bool fHelp)
 UniValue receivesidechainwt(const UniValue& params, bool fHelp)
 {
     // Note: the sidechain makes this RPC request automatically
-    if (fHelp || params.size() != 1)
+    if (fHelp || params.size() != 3)
         throw runtime_error(
             "receivesidechainwt\n"
-            "Called by drivechain clients to announce their WT^ txid(s)\n"
+            "Called by drivechain clients to announce their WT^ tx(s)\n"
             "\nArguments:\n"
-            "1. \"txid\"        (string, required) The transaction id\n"
+            "0. \"sidechainid\"     (uint256, required) The sidechain id\n"
+            "1. \"txid\"            (string, required) The transaction id\n"
+            "2. \"rawtx\"           (string, required) The raw transaction hex\n"
             "\nExamples:\n"
-            + HelpExampleCli("receivesidechainwt", "\"txid\"")
-            + HelpExampleRpc("receivesidechainwt", "\"txid\"")
+            + HelpExampleCli("receivesidechainwt", "\"tx\"")
+            + HelpExampleRpc("receivesidechainwt", "\"tx\"")
         );
 
     if (!psidechaintree) {
@@ -1107,12 +1113,32 @@ UniValue receivesidechainwt(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
     }
 
-    // Grab the WT ID from the sidechain (sidechain makes rpc request)
-    std::string strHash = params[0].get_str();
-    uint256 hash(uint256S(strHash));
+    // Grab the WT^ from the sidechain (sidechain makes rpc request)
+    uint256 sidechainid(uint256S(params[0].get_str()));
+    uint256 hash(uint256S(params[1].get_str()));
+    std::string hex = params[2].get_str();
+
+    // Does the sidechain exist? Is it valid?
+    {
+        sidechainSidechain tmp;
+        if (!psidechaintree->GetSidechain(sidechainid, tmp))
+            return false;
+
+        bool found = false;
+        BOOST_FOREACH(uint256 id, validSidechains)
+            if (id == sidechainid)
+                found = true;
+
+        if (!found) return false;
+    }
+
+    CTransaction wt;
+    DecodeHexTx(wt, hex);
 
     sidechainWithdraw withdraw;
     withdraw.proposaltxid = hash;
+    withdraw.sidechainid = sidechainid;
+    withdraw.wt = wt;
 
     EnsureWalletIsUnlocked();
 
