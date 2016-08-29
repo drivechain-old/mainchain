@@ -81,6 +81,22 @@ uint64_t nPruneTarget = 0;
 int64_t nMaxTipAge = DEFAULT_MAX_TIP_AGE;
 bool fEnableReplacement = DEFAULT_ENABLE_REPLACEMENT;
 
+uint32_t GetSidechainObjHeight(const sidechainObj &obj)
+{
+    uint32_t height = (uint32_t) (-1);
+
+    // If the obj exists on the blockchain, get the nHeight
+    CTransaction tx;
+    uint256 hashBlock;
+    if (GetTransaction(obj.txid, tx, Params().GetConsensus(), hashBlock, true)) {
+        CBlockIndex *pindex = (*mapBlockIndex.find(hashBlock)).second;
+        if (pindex && chainActive.Contains(pindex))
+            height = pindex->nHeight;
+    }
+
+    return height;
+}
+
 CFeeRate minRelayTxFee = CFeeRate(DEFAULT_MIN_RELAY_TX_FEE);
 CAmount maxTxFee = DEFAULT_TRANSACTION_MAXFEE;
 
@@ -1848,53 +1864,56 @@ bool CheckVerifications(sidechainWithdraw *wt)
         return false;
 
     // Are there verifications?
-    vector<sidechainVerify> vDirtyVers = psidechaintree->GetVerifications(wt->GetHash());
-    if (!vDirtyVers.size())
+    vector<sidechainVerify> vDirtyVer = psidechaintree->GetVerifications(wt->GetHash());
+    if (!vDirtyVer.size())
         return false;
 
     // Find out the height of the current most-worked-on chain
     const CBlockIndex* pindex = chainActive.Tip();
     const int nHeight = pindex->nHeight;
 
-    int minHeight = nHeight - sidechain.verificationPeriod;
-    int maxHeight = nHeight;
+    uint32_t minHeight = nHeight - sidechain.verificationPeriod;
+    uint32_t maxHeight = nHeight;
 
     // Go through verifications (from this period) for this WT^
-    vector<sidechainVerify> vCleanVers;
-    for (size_t i = 0; i < vDirtyVers.size(); i++) {
+    vector<sidechainVerify> vCleanVer;
+    for (size_t i = 0; i < vDirtyVer.size(); i++) {
         // Filter out verifications with invalid height
-        if ((int)vDirtyVers[i].nHeight > maxHeight)
+        if (GetSidechainObjHeight(vDirtyVer[i]) > maxHeight)
             continue;
 
         // Filter out verifications that are too old
-        if ((int)vDirtyVers[i].nHeight < minHeight)
+        if (GetSidechainObjHeight(vDirtyVer[i]) < minHeight)
             continue;
 
-        vCleanVers.push_back(vDirtyVers[i]);
+        vCleanVer.push_back(vDirtyVer[i]);
     }
 
     // Sort the filtered verifications (ascending by nHeight)
-    std::sort(vCleanVers.begin(), vCleanVers.end(),
-        [](const sidechainVerify& x, const sidechainVerify& y){return x.nHeight < y.nHeight;});
+    // Sort the filtered verifications (ascending by nHeight)
+    std::sort(vCleanVer.begin(), vCleanVer.end(), [](const sidechainVerify& x, const sidechainVerify& y)
+    {
+        return GetSidechainObjHeight(x) < GetSidechainObjHeight(y);
+    });
 
-    if (!vCleanVers.size())
+    if (!vCleanVer.size())
         return false;
 
     // First vote should be 1
-    if (vCleanVers[0].workScore != 1)
+    if (vCleanVer[0].workScore != 1)
         return false;
 
     // Check sanity of workscore increment / decrement
     uint32_t last = 0;
-    for (size_t i = 0; i < vCleanVers.size(); i++) {
+    for (size_t i = 0; i < vCleanVer.size(); i++) {
         // If the workscore is invalid, go to the next in the list
-        if (std::abs(vCleanVers[i].workScore - last) > 1)
+        if (std::abs(vCleanVer[i].workScore - last) > 1)
             continue;
-        last = vCleanVers[i].workScore;
+        last = vCleanVer[i].workScore;
     }
 
-    // Final vote should be equal to sidechain minWorkScore
-    if (!(vCleanVers[ARRAYLEN(vCleanVers)].workScore == sidechain.minWorkScore))
+    // Final vote must be at least minWorkScore
+    if (!(vCleanVer[ARRAYLEN(vCleanVer)].workScore >= sidechain.minWorkScore))
         return false;
 
     return true;
@@ -2513,7 +2532,7 @@ bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockIndex* pin
     if (fSidechainIndex) {
         // Collect sidechain objects
         std::vector<std::pair<uint256, const sidechainObj *> > vSidechainObjects;
-        for (unsigned int i = 0; i < block.vtx.size(); i++) {
+        for (size_t i = 0; i < block.vtx.size(); i++) {
             const CTransaction &tx = block.vtx[i];
             BOOST_FOREACH(const CTxOut& txout, tx.vout) {
                 const CScript& scriptPubKey = txout.scriptPubKey;

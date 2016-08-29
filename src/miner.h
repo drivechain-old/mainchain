@@ -27,10 +27,14 @@ struct CBlockTemplate
     std::vector<int64_t> vTxSigOps;
 };
 
-/** Check validity of WT^ */
-bool checkWithdraw(sidechainWithdraw withdraw, sidechainSidechain sidechain);
-/** Check sidechain WT^ transactions and update verification status */
-CTransaction getSidechainTX(sidechainSidechain sidechain, uint32_t height);
+/** Check validity of WT^ (not the workscore, just format) */
+bool CheckWithdraw(sidechainWithdraw withdraw, sidechainSidechain sidechain);
+/** Get sidechain WT^ payout transaction if there is one */
+CTransaction GetSidechainWTJoin(sidechainSidechain sidechain, uint32_t height);
+/** Increment / decrement WT^ workscore */
+CTransaction GetSidechainScoreTX(sidechainSidechain sidechain, uint32_t height);
+/** Calculate nHeight of the last tau (end of period) */
+uint32_t GetLastTauHeight(sidechainSidechain sidechain, uint32_t height);
 /** Generate a new block, without valid proof-of-work */
 CBlockTemplate* CreateNewBlock(const CChainParams& chainparams, const CScript& scriptPubKeyIn);
 /** Modify the extranonce in a block */

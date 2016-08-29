@@ -5,6 +5,7 @@
 #include "primitives/sidechain.h"
 
 #include "clientversion.h"
+#include "core_io.h"
 #include "hash.h"
 #include "streams.h"
 
@@ -133,7 +134,7 @@ string sidechainSidechain::ToString() const
     str << "waitPeriod=" << waitPeriod << endl;
     str << "verificationPeriod=" << verificationPeriod << endl;
     str << "minWorkScore=" << minWorkScore << endl;
-    str << "depositPubKey=" << HexStr(depositPubKey) << endl;
+    str << "depositScript=" << HexStr(depositScript) << endl;
     return str.str();
 }
 
@@ -143,7 +144,6 @@ string sidechainWithdraw::ToString() const
     str << "sidechainop=" << sidechainop << endl;
     str << "nHeight=" << nHeight << endl;
     str << "txid=" << txid.GetHex() << endl;
-    str << "proposaltxid=" << proposaltxid.GetHex() << endl;
     return str.str();
 }
 
@@ -153,8 +153,8 @@ string sidechainDeposit::ToString() const
     str << "sidechainop=" << sidechainop << endl;
     str << "nHeight=" << nHeight << endl;
     str << "txid=" << txid.GetHex() << endl;
-    str << "deposittxid=" << deposittxid.GetHex() << endl;
     str << "sidechainid=" << sidechainid.GetHex() << endl;
+    str << "dt=" << dt.ToString() << endl;
     str << "keyID=" << keyID.GetHex() << endl;
     return str.str();
 }
