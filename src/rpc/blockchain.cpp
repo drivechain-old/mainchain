@@ -4,11 +4,13 @@
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include "amount.h"
+#include "base58.h"
 #include "chain.h"
 #include "chainparams.h"
 #include "checkpoints.h"
 #include "coins.h"
 #include "consensus/validation.h"
+#include "core_io.h"
 #include "hash.h"
 #include "main.h"
 #include "policy/policy.h"
@@ -31,6 +33,9 @@
 #include <boost/thread/thread.hpp> // boost::thread::interrupt
 
 using namespace std;
+
+const uint32_t nType = 1;
+const uint32_t nVersion = 1;
 
 extern void TxToJSON(const CTransaction& tx, const uint256 hashBlock, UniValue& entry);
 void ScriptPubKeyToJSON(const CScript& scriptPubKey, UniValue& out, bool fIncludeHex);
@@ -696,7 +701,7 @@ static UniValue BIP9SoftForkDesc(const Consensus::Params& consensusParams, Conse
 CScript getSidechainDepositScript()
 {
     CScript sidechainScript;
-    sidechainScript << OP_TRUE;
+    sidechainScript << OP_TRUE; // TODO OP_CHECKWORKSCOREVERIFY
     return sidechainScript;
 }
 
@@ -728,7 +733,7 @@ UniValue createsidechain(const UniValue& params, bool fHelp)
     sidechain.waitPeriod = (uint16_t)params[0].get_int();
     sidechain.verificationPeriod = (uint16_t)params[1].get_int();
     sidechain.minWorkScore = (uint16_t)params[2].get_int();
-    sidechain.depositPubKey = getSidechainDepositScript();
+    sidechain.depositScript = getSidechainDepositScript();
 
     // Check if duplicate sidechain
     uint256 objid = sidechain.GetHash();
@@ -809,14 +814,20 @@ UniValue getsidechain(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
     }
 
+    // Deposit pubkey
+    CScriptID innerID(sidechain.depositScript);
+    CBitcoinAddress drivechainAddress;
+    drivechainAddress.Set(innerID, true);
+
     UniValue ret(UniValue::VOBJ);
     ret.push_back(Pair("sidechainid", id.ToString()));
     ret.push_back(Pair("txid", sidechain.txid.ToString()));
     ret.push_back(Pair("minWorkScore", (int)sidechain.minWorkScore));
     ret.push_back(Pair("verificationPeriod", (int)sidechain.verificationPeriod));
     ret.push_back(Pair("waitPeriod", (int)sidechain.waitPeriod));
-    ret.push_back(Pair("nHeight", (int)sidechain.nHeight));
-    ret.push_back(Pair("depositPubKey", HexStr(sidechain.depositPubKey)));
+    ret.push_back(Pair("nHeight", (int)GetSidechainObjHeight(sidechain)));
+    ret.push_back(Pair("depositScript", HexStr(sidechain.depositScript)));
+    ret.push_back(Pair("depositAddress", drivechainAddress.ToString()));
 
     return ret;
 }
@@ -845,7 +856,7 @@ UniValue getsidechainwithdraw(const UniValue& params, bool fHelp)
 
     sidechainWithdraw withdraw;
 
-    if (!psidechaintree->GetWithdrawProposal(id, withdraw)) {
+    if (!psidechaintree->GetJoinedWT(id, withdraw)) {
         string strError = std::string("Error: withdrawid ")
                 + id.ToString() + " not found!";
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
@@ -853,10 +864,10 @@ UniValue getsidechainwithdraw(const UniValue& params, bool fHelp)
 
     UniValue ret(UniValue::VOBJ);
     ret.push_back(Pair("withdrawid", id.ToString()));
-    ret.push_back(Pair("proposaltxid", withdraw.proposaltxid.ToString()));
+    ret.push_back(Pair("WT", withdraw.wt.ToString()));
     ret.push_back(Pair("sidechainid", withdraw.sidechainid.ToString()));
     ret.push_back(Pair("txid", withdraw.txid.ToString()));
-    ret.push_back(Pair("nHeight", (int)withdraw.nHeight));
+    ret.push_back(Pair("nHeight", (int)GetSidechainObjHeight(withdraw)));
     return ret;
 }
 
@@ -893,9 +904,9 @@ UniValue getsidechaindeposit(const UniValue& params, bool fHelp)
     UniValue ret(UniValue::VOBJ);
     ret.push_back(Pair("depositid", id.ToString()));
     ret.push_back(Pair("txid", deposit.txid.ToString()));
-    ret.push_back(Pair("nHeight", (int)deposit.nHeight));
-    ret.push_back(Pair("deposittxid", deposit.deposittxid.ToString()));
+    ret.push_back(Pair("nHeight", (int)GetSidechainObjHeight(deposit)));
     ret.push_back(Pair("sidechainid", deposit.sidechainid.ToString()));
+    ret.push_back(Pair("dt", EncodeHexTx(deposit.dt)));
     ret.push_back(Pair("keyID", deposit.keyID.ToString()));
     return ret;
 }
@@ -954,7 +965,7 @@ UniValue listsidechains(const UniValue& params, bool fHelp)
 
         UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("id", sidechain.GetHash().GetHex()));
-        obj.push_back(Pair("nHeight", (int)sidechain.nHeight));
+        obj.push_back(Pair("nHeight", (int)GetSidechainObjHeight(sidechain)));
 
         res.push_back(obj);
     }
@@ -984,7 +995,7 @@ UniValue listsidechainwithdraws(const UniValue& params, bool fHelp)
     uint256 id;
     id.SetHex(params[0].get_str());
 
-    vector<sidechainWithdraw> vec = psidechaintree->GetWithdrawProposals(id);
+    vector<sidechainWithdraw> vec = psidechaintree->GetJoinedWTs(id);
 
     UniValue res(UniValue::VARR);
 
@@ -993,7 +1004,7 @@ UniValue listsidechainwithdraws(const UniValue& params, bool fHelp)
 
         UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("id", withdraw.GetHash().GetHex()));
-        obj.push_back(Pair("nHeight", (int)withdraw.nHeight));
+        obj.push_back(Pair("nHeight", (int)GetSidechainObjHeight(withdraw)));
 
         res.push_back(obj);
     }
@@ -1036,8 +1047,8 @@ UniValue listsidechaindeposits(const UniValue& params, bool fHelp)
         UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("depositid", deposit.GetHash().GetHex()));
         obj.push_back(Pair("txid", deposit.txid.ToString()));
-        obj.push_back(Pair("nHeight", (int)deposit.nHeight));
-        obj.push_back(Pair("deposittxid", deposit.deposittxid.ToString()));
+        obj.push_back(Pair("nHeight", (int)GetSidechainObjHeight(deposit)));
+        obj.push_back(Pair("dtHash", deposit.dt.GetHash().ToString()));
         obj.push_back(Pair("sidechainid", deposit.sidechainid.ToString()));
         obj.push_back(Pair("keyID", deposit.keyID.ToString()));
 
@@ -1078,7 +1089,7 @@ UniValue listsidechainverifications(const UniValue& params, bool fHelp)
 
         UniValue obj(UniValue::VOBJ);
         obj.push_back(Pair("id", verify.GetHash().GetHex()));
-        obj.push_back(Pair("nHeight", (int)verify.nHeight));
+        obj.push_back(Pair("nHeight", (int)GetSidechainObjHeight(verify)));
         obj.push_back(Pair("workScore", (int)verify.workScore));
         obj.push_back(Pair("wtxid", verify.wtxid.GetHex()));
 
@@ -1091,15 +1102,16 @@ UniValue listsidechainverifications(const UniValue& params, bool fHelp)
 UniValue receivesidechainwt(const UniValue& params, bool fHelp)
 {
     // Note: the sidechain makes this RPC request automatically
-    if (fHelp || params.size() != 1)
+    if (fHelp || params.size() != 2)
         throw runtime_error(
             "receivesidechainwt\n"
-            "Called by drivechain clients to announce their WT^ txid(s)\n"
+            "Called by drivechain clients to announce their WT^ tx(s)\n"
             "\nArguments:\n"
-            "1. \"txid\"        (string, required) The transaction id\n"
+            "0. \"sidechainid\"     (uint256, required) The sidechain id\n"
+            "1. \"rawtx\"           (string, required) The raw transaction hex\n"
             "\nExamples:\n"
-            + HelpExampleCli("receivesidechainwt", "\"txid\"")
-            + HelpExampleRpc("receivesidechainwt", "\"txid\"")
+            + HelpExampleCli("receivesidechainwt", "\"tx\"")
+            + HelpExampleRpc("receivesidechainwt", "\"tx\"")
         );
 
     if (!psidechaintree) {
@@ -1107,19 +1119,37 @@ UniValue receivesidechainwt(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
     }
 
-    // Grab the WT ID from the sidechain (sidechain makes rpc request)
-    std::string strHash = params[0].get_str();
-    uint256 hash(uint256S(strHash));
+    // Grab the WT^ from the sidechain (sidechain makes rpc request)
+    uint256 sidechainid(uint256S(params[0].get_str()));
+    std::string hex = params[1].get_str();
+
+    // Does the sidechain exist? Is it valid?
+    {
+        sidechainSidechain tmp;
+        if (!psidechaintree->GetSidechain(sidechainid, tmp))
+            return false;
+
+        bool found = false;
+        BOOST_FOREACH(uint256 id, validSidechains)
+            if (id == sidechainid)
+                found = true;
+
+        if (!found) return false;
+    }
+
+    CTransaction wt;
+    DecodeHexTx(wt, hex);
 
     sidechainWithdraw withdraw;
-    withdraw.proposaltxid = hash;
+    withdraw.sidechainid = sidechainid;
+    withdraw.wt = wt;
 
     EnsureWalletIsUnlocked();
 
     // Check if duplicate WT
     uint256 objid = withdraw.GetHash();
     sidechainWithdraw duplicate;
-    if (psidechaintree->GetWithdrawProposal(objid, duplicate)) {
+    if (psidechaintree->GetJoinedWT(objid, duplicate)) {
         string strError = std::string("Error: withdrawid ")
             + objid.ToString() + " already exists!";
         throw JSONRPCError(RPC_BLOCKCHAIN_ERROR, strError.c_str());
@@ -1160,6 +1190,7 @@ UniValue receivesidechainwt(const UniValue& params, bool fHelp)
         throw JSONRPCError(RPC_WALLET_ERROR,
             "Error: Transaction to add WT to sidechain index was rejected!");
 
+
     UniValue ret(UniValue::VOBJ);
     ret.push_back(Pair("withdrawid", withdraw.GetHash().GetHex()));
     return ret;
@@ -1195,15 +1226,13 @@ UniValue requestdrivechaindeposits(const UniValue& params, bool fHelp)
 
     UniValue ret(UniValue::VOBJ);
 
+    // Give the sidechain only the info it requires
     for (size_t i = 0; i < vDeposit.size(); i++) {
         const sidechainDeposit deposit = vDeposit[i];
 
         UniValue obj(UniValue::VOBJ);
-        obj.push_back(Pair("depositid", deposit.GetHash().GetHex()));
-        obj.push_back(Pair("txid", deposit.txid.ToString()));
-        obj.push_back(Pair("nHeight", (int)deposit.nHeight));
-        obj.push_back(Pair("deposittxid", deposit.deposittxid.ToString()));
         obj.push_back(Pair("sidechainid", deposit.sidechainid.ToString()));
+        obj.push_back(Pair("dt", EncodeHexTx(deposit.dt)));
         obj.push_back(Pair("keyID", deposit.keyID.ToString()));
 
         ret.push_back(Pair("deposit", obj));

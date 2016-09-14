@@ -19,14 +19,13 @@
 using namespace std;
 
 // TODO miner checks list before accepting createSidechain TX
+// TODO change valid sidechain list to pairs of (uint256 sidechainid, str name)
 /**
  * List of sidechains considered valid
  */
 const uint256 sidechains[] = {
-    // Test Sidechain (200, 200, 200)
-    uint256S("0xca85db47c45dfccfa9f5562f7383c7b3fe1746017327371771ed3f70345b72d4"),
-    // Test Sidechain 2
-    uint256S("0x8147bcc9e3268d2d42e851e73efcd872fbb3e0c649876419e86615681c7a580a")
+    // Test Sidechain
+    uint256S("0xca85db47c45dfccfa9f5562f7383c7b3fe1746017327371771ed3f70345b72d4")
 };
 
 const std::set<uint256> validSidechains(sidechains, sidechains + ARRAYLEN(sidechains));
@@ -54,7 +53,7 @@ struct sidechainSidechain : public sidechainObj {
     uint16_t waitPeriod;
     uint16_t verificationPeriod;
     uint16_t minWorkScore;
-    CScript depositPubKey;
+    CScript depositScript;
 
     sidechainSidechain(void) : sidechainObj() { sidechainop = 'S'; }
     virtual ~sidechainSidechain(void) { }
@@ -67,7 +66,7 @@ struct sidechainSidechain : public sidechainObj {
         READWRITE(waitPeriod);
         READWRITE(verificationPeriod);
         READWRITE(minWorkScore);
-        READWRITE(*(CScriptBase*)(&depositPubKey));
+        READWRITE(*(CScriptBase*)(&depositScript));
     }
 
     string ToString(void) const;
@@ -78,7 +77,7 @@ struct sidechainSidechain : public sidechainObj {
  */
 struct sidechainWithdraw : public sidechainObj {
     uint256 sidechainid;
-    uint256 proposaltxid;
+    CTransaction wt;
 
     sidechainWithdraw(void) : sidechainObj() { sidechainop = 'W'; }
     virtual ~sidechainWithdraw(void) { }
@@ -88,7 +87,8 @@ struct sidechainWithdraw : public sidechainObj {
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(sidechainop);
-        READWRITE(proposaltxid);
+        READWRITE(sidechainid);
+        READWRITE(wt);
     }
 
     string ToString(void) const;
@@ -98,8 +98,8 @@ struct sidechainWithdraw : public sidechainObj {
  * Sidechain deposit added to database
  */
 struct sidechainDeposit : public sidechainObj {
-    uint256 deposittxid;
     uint256 sidechainid;
+    CTransaction dt;
     CKeyID keyID;
 
     sidechainDeposit(void) : sidechainObj() { sidechainop = 'D'; }
@@ -110,8 +110,8 @@ struct sidechainDeposit : public sidechainObj {
     template <typename Stream, typename Operation>
     inline void SerializationOp(Stream& s, Operation ser_action, int nType, int nVersion) {
         READWRITE(sidechainop);
-        READWRITE(deposittxid);
         READWRITE(sidechainid);
+        READWRITE(dt);
         READWRITE(keyID);
     }
 
@@ -121,7 +121,7 @@ struct sidechainDeposit : public sidechainObj {
 // TODO
 
 /**
- * Sidechain proposal verification (verified if verify = true, rejected otherwise)
+ * Sidechain proposal verification
  * Two verification types:
  * (1) "full vote" with the full serialization of the sidechain / WT^
  * (2) "compressed vote" with the head of the serialization data (and score).

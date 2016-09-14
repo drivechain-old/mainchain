@@ -306,28 +306,28 @@ bool CSidechainTreeDB::ReadFlag(const string &name, bool &fValue)
 }
 
 bool CSidechainTreeDB::GetSidechain(const uint256 &objid, sidechainSidechain &sidechain) {
-    if (Read(make_pair('S', objid), sidechain))
+    if (ReadSidechain(make_pair('S', objid), sidechain))
         return true;
 
     return false;
 }
 
-bool CSidechainTreeDB::GetWithdrawProposal(const uint256 &objid, sidechainWithdraw &withdraw) {
-    if (Read(make_pair('W', objid), withdraw))
+bool CSidechainTreeDB::GetJoinedWT(const uint256 &objid, sidechainWithdraw &withdraw) {
+    if (ReadSidechain(make_pair('W', objid), withdraw))
         return true;
 
     return false;
 }
 
 bool CSidechainTreeDB::GetDeposit(const uint256 &objid, sidechainDeposit &deposit) {
-    if (Read(make_pair('D', objid), deposit))
+    if (ReadSidechain(make_pair('D', objid), deposit))
         return true;
 
     return false;
 }
 
 bool CSidechainTreeDB::GetVerification(const uint256 &objid, sidechainVerify &verify) {
-    if (Read(make_pair('V', objid), verify))
+    if (ReadSidechain(make_pair('V', objid), verify))
         return true;
 
     return false;
@@ -346,7 +346,7 @@ vector<sidechainSidechain> CSidechainTreeDB::GetSidechains(void) {
         std::pair<char, uint256> key;
         sidechainSidechain sidechain;
         if (pcursor->GetKey(key) && key.first == sidechainop) {
-            if (pcursor->GetValue(sidechain))
+            if (pcursor->GetSidechainValue(sidechain))
                 vSidechain.push_back(sidechain);
         }
     }
@@ -354,8 +354,8 @@ vector<sidechainSidechain> CSidechainTreeDB::GetSidechains(void) {
     return vSidechain;
 }
 
-vector<sidechainWithdraw> CSidechainTreeDB::GetWithdrawProposals(const uint256 &objid) {
-    const char withdrawop = 'w';
+vector<sidechainWithdraw> CSidechainTreeDB::GetJoinedWTs(const uint256 &objid) {
+    const char withdrawop = 'W';
     ostringstream ss;
     ::Serialize(ss, make_pair(make_pair(withdrawop, objid), uint256()), SER_DISK, CLIENT_VERSION);
 
@@ -367,7 +367,7 @@ vector<sidechainWithdraw> CSidechainTreeDB::GetWithdrawProposals(const uint256 &
         std::pair<char, uint256> key;
         sidechainWithdraw withdraw;
         if (pcursor->GetKey(key) && key.first == withdrawop) {
-            if (pcursor->GetValue(withdraw))
+            if (pcursor->GetSidechainValue(withdraw))
                 vWithdraw.push_back(withdraw);
         }
     }
@@ -377,7 +377,7 @@ vector<sidechainWithdraw> CSidechainTreeDB::GetWithdrawProposals(const uint256 &
 
 vector<sidechainDeposit> CSidechainTreeDB::GetDeposits(const uint256 &objid, uint32_t height) {
     // TODO filter by height
-    const char depositop = 'd';
+    const char depositop = 'D';
     ostringstream ss;
     ::Serialize(ss, make_pair(make_pair(depositop, objid), uint256()), SER_DISK, CLIENT_VERSION);
 
@@ -389,7 +389,7 @@ vector<sidechainDeposit> CSidechainTreeDB::GetDeposits(const uint256 &objid, uin
         std::pair<char, uint256> key;
         sidechainDeposit deposit;
         if (pcursor->GetKey(key) && key.first == depositop) {
-            if (pcursor->GetValue(deposit))
+            if (pcursor->GetSidechainValue(deposit))
                 vDeposit.push_back(deposit);
         }
     }
@@ -398,7 +398,7 @@ vector<sidechainDeposit> CSidechainTreeDB::GetDeposits(const uint256 &objid, uin
 }
 
 vector<sidechainVerify> CSidechainTreeDB::GetVerifications(const uint256 &objid) {
-    const char verifyop = 'v';
+    const char verifyop = 'V';
     ostringstream ss;
     ::Serialize(ss, make_pair(make_pair(verifyop, objid), uint256()), SER_DISK, CLIENT_VERSION);
 
@@ -410,7 +410,7 @@ vector<sidechainVerify> CSidechainTreeDB::GetVerifications(const uint256 &objid)
         std::pair<char, uint256> key;
         sidechainVerify verify;
         if (pcursor->GetKey(key) && key.first == verifyop) {
-            if (pcursor->GetValue(verify))
+            if (pcursor->GetSidechainValue(verify))
                 vVerify.push_back(verify);
         }
     }
