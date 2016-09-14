@@ -1848,7 +1848,6 @@ bool CheckTxInputs(const CTransaction& tx, CValidationState& state, const CCoins
             return state.DoS(100, false, REJECT_INVALID, "bad-txns-fee-outofrange");
     return true;
 }
-}// namespace Consensus
 
 bool CheckVerifications(sidechainWithdraw *wt)
 {
@@ -1919,6 +1918,8 @@ bool CheckVerifications(sidechainWithdraw *wt)
     return true;
 }
 
+}// namespace Consensus
+
 bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsViewCache &inputs, bool fScriptChecks, unsigned int flags, bool cacheStore, std::vector<CScriptCheck> *pvChecks)
 {
     // Check inputs that want to spend from sidechain WT^
@@ -1933,7 +1934,7 @@ bool CheckInputs(const CTransaction& tx, CValidationState &state, const CCoinsVi
         if (!wt)
             continue;
 
-        if (!CheckVerifications(wt))
+        if (!Consensus::CheckVerifications(wt))
             continue;
     }
 
